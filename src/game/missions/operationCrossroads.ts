@@ -50,19 +50,19 @@ function buildDecorations(): MapDecoration[] {
   });
 
   // Tree clusters, scattered.
-  const treeSeed: Array<[number, number, 'pine' | 'oak']> = [];
+  const treeSeed: Array<[number, number, 'pine' | 'oak' | 'shrub']> = [];
   const rng = mulberry32(1337);
-  for (let i = 0; i < 80; i += 1) {
+  for (let i = 0; i < 95; i += 1) {
     const x = (rng() - 0.5) * (MAP_SIZE - 16);
     const z = (rng() - 0.5) * (MAP_SIZE - 16);
     // Skip tree spawns too close to roads or crossroads center.
-    if (Math.abs(x) < 7 || Math.abs(z) < 7) continue;
+    if (Math.abs(x) < 11 || Math.abs(z) < 11) continue;
     if (Math.abs(x) < 14 && Math.abs(z) < 14) continue;
-    treeSeed.push([x, z, rng() > 0.5 ? 'pine' : 'oak']);
+    treeSeed.push([x, z, rng() > 0.54 ? 'pine' : rng() > 0.25 ? 'oak' : 'shrub']);
   }
   treeSeed.forEach((t, i) => {
     const [x, z, kind] = t;
-    const height = 3 + rng() * 2.5;
+    const height = kind === 'shrub' ? 1.1 + rng() * 0.8 : 3 + rng() * 2.5;
     out.push(deco(`tree_${i}`, 'tree', x, z, rng() * Math.PI * 2, { x: 1.4, y: height, z: 1.4 }, kind));
   });
 
@@ -189,11 +189,13 @@ function buildUnits(): Unit[] {
     patrolTo: { x: -12, y: 0, z: 8 },
     destination: { x: -12, y: 0, z: 8 },
   };
+  lightTank.aiState = 'patrol';
 
   // Hold orders for everyone else (defensive posture).
   for (const u of enemy) {
     if (u.id === lightTank.id) continue;
     u.currentOrder = { kind: 'hold' };
+    u.aiState = 'guard';
   }
 
   return [...friendly, ...enemy];

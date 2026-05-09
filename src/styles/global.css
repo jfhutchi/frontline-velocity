@@ -283,6 +283,11 @@ button.danger {
 }
 .unit-panel .stat-row span.value {
   color: var(--fg-0);
+  max-width: 150px;
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .unit-panel .health-bar {
   position: relative;
@@ -310,6 +315,16 @@ button.danger {
 .unit-panel .panel-actions button {
   font-size: 11px;
   padding: 5px 8px;
+}
+.unit-panel .under-fire {
+  margin-top: 7px;
+  padding: 4px 6px;
+  border: 1px solid rgba(211, 88, 88, 0.65);
+  color: #ffd0c9;
+  background: rgba(115, 30, 24, 0.45);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
 }
 
 .controls-help {
@@ -385,6 +400,43 @@ button.danger {
   color: var(--danger);
 }
 
+.event-log {
+  position: absolute;
+  left: 320px;
+  bottom: 14px;
+  width: min(360px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  pointer-events: none;
+}
+.event-log div {
+  width: fit-content;
+  max-width: 100%;
+  padding: 5px 8px;
+  background: rgba(8, 16, 12, 0.62);
+  border-left: 2px solid var(--accent-warm);
+  color: var(--fg-0);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  box-shadow: var(--hud-shadow);
+}
+
+.mobile-camera-pad {
+  display: none;
+  position: absolute;
+  right: 12px;
+  top: 92px;
+  gap: 5px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 220px;
+}
+.mobile-camera-pad button {
+  padding: 6px 8px;
+  font-size: 11px;
+}
+
 /* ---------- Direct-control HUD ---------- */
 
 .dc-hud {
@@ -422,6 +474,25 @@ button.danger {
   top: 50%;
   left: -8px;
   margin-top: -1px;
+}
+
+.dc-reload-ring {
+  position: absolute;
+  top: calc(50% + 28px);
+  left: 50%;
+  width: 54px;
+  height: 5px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 220, 120, 0.55);
+  background: rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+.dc-reload-ring::before {
+  content: '';
+  display: block;
+  height: 100%;
+  width: var(--reload);
+  background: linear-gradient(90deg, var(--accent-warm), #fff0a6);
 }
 
 .dc-bottom-panel {
@@ -629,6 +700,18 @@ button.danger {
   }
   .controls-help {
     display: none;
+  }
+  .mobile-camera-pad {
+    display: flex;
+  }
+  .event-log {
+    top: 260px;
+    bottom: auto;
+    left: 10px;
+    width: min(300px, calc(100vw - 20px));
+  }
+  .event-log div {
+    font-size: 10px;
   }
   .unit-roster {
     top: 70px;

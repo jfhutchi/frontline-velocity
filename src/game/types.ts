@@ -12,6 +12,7 @@ export type UnitType =
   | 'antiTankGun';
 
 export type OrderKind = 'idle' | 'move' | 'attack' | 'hold' | 'patrol';
+export type AIState = 'idle' | 'patrol' | 'guard' | 'alert' | 'engage' | 'reposition' | 'destroyed';
 
 export interface Order {
   kind: OrderKind;
@@ -19,6 +20,8 @@ export interface Order {
   targetUnitId?: string;
   patrolFrom?: Vec3;
   patrolTo?: Vec3;
+  path?: Vec3[];
+  pathIndex?: number;
 }
 
 export interface Weapon {
@@ -57,6 +60,22 @@ export interface Unit {
   destroyedAt?: number;
   /** Last time we registered a damage hit for visual feedback. */
   lastDamagedAt?: number;
+  /** Last hostile unit that damaged this unit, used for target priority. */
+  lastAttackerId?: string;
+  /** Current smoothed movement speed for non-direct-control movement. */
+  currentSpeed: number;
+  /** Last issued tactical destination, kept visible after hold/engage state changes. */
+  lastOrderDestination?: Vec3;
+  /** Coarse AI state for behavior and HUD readability. */
+  aiState: AIState;
+  /** Defensive home position used by guard/patrol behavior. */
+  aiHome: Vec3;
+  /** Maximum distance a guarding AI should chase before returning. */
+  aiLeashRadius: number;
+  /** Next simulation timestamp when this unit may reconsider targets. */
+  aiNextThinkAt: number;
+  /** Simulation timestamp until which the current target is sticky. */
+  targetLockedUntil: number;
 }
 
 export interface Projectile {
@@ -86,6 +105,8 @@ export interface ObjectiveZone {
   occupiedByFriendly: boolean;
   /** True if an enemy unit is currently contesting. */
   contested: boolean;
+  /** Last computed status, used to avoid repeating battlefield log messages. */
+  lastStatus?: 'empty' | 'friendly' | 'contested' | 'captured';
 }
 
 export interface MissionDefinition {
@@ -111,16 +132,22 @@ export interface MapDecoration {
   rotation: number;
   scale: Vec3;
   /** Optional palette tint hint for the renderer. */
-  tint?: 'wall' | 'roof' | 'pine' | 'oak' | 'dirt' | 'grass' | 'asphalt';
+  tint?: 'wall' | 'roof' | 'pine' | 'oak' | 'shrub' | 'dirt' | 'grass' | 'asphalt';
 }
 
 export interface EffectEvent {
   id: string;
-  kind: 'muzzleFlash' | 'explosion' | 'hit' | 'wreck';
+  kind: 'muzzleFlash' | 'explosion' | 'hit' | 'smoke' | 'wreck';
   position: Vec3;
   spawnedAt: number;
   duration: number;
   scale?: number;
+}
+
+export interface BattlefieldEvent {
+  id: string;
+  time: number;
+  message: string;
 }
 
 export interface SimulationState {
@@ -129,6 +156,7 @@ export interface SimulationState {
   units: Map<string, Unit>;
   projectiles: Projectile[];
   effects: EffectEvent[];
+  eventLog: BattlefieldEvent[];
   objective: ObjectiveZone;
   mission: MissionDefinition;
   /** Set if the simulation is over: 'victory' | 'defeat'. */

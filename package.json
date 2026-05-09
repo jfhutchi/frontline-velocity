@@ -1,7 +1,7 @@
 {
-  "name": "steel-command-frontline-velocity",
+  "name": "frontline-velocity",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "description": "Steel Command: Frontline Velocity — a browser-based tactical action game spiritual successor.",
   "scripts": {

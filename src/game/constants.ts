@@ -28,12 +28,31 @@ export const PROJECTILE_LIFETIME = 4;
 export const PROJECTILE_HIT_RADIUS = 1.6;
 export const SPLASH_BASE_RADIUS = 3.5;
 export const SIGHT_RANGE_BONUS = 4; // Units start engaging slightly inside their actual range.
+export const AI_THINK_INTERVAL = 0.35;
+export const TARGET_STICKY_SECONDS = 1.4;
 
 // Movement / pathing tuning.
 export const ARRIVE_RADIUS = 1.0;
 export const TURN_RATE = 2.4; // radians/sec for hull turning.
 export const TURRET_TURN_RATE = 3.2;
 export const VEHICLE_FRICTION = 4.0;
+export const PATH_OBSTACLE_MARGIN = 2.4;
+export const UNIT_SEPARATION_STRENGTH = 0.35;
+export const MOVE_ACCELERATION = 8.0;
+
+// Tactical camera tuning.
+export const TACTICAL_CAMERA_DEFAULT = {
+  alpha: Math.PI * 0.5,
+  beta: Math.PI * 0.34,
+  radius: 132,
+  target: { x: -34, y: 0, z: 52 },
+} as const;
+export const TACTICAL_CAMERA_MIN_RADIUS = 26;
+export const TACTICAL_CAMERA_MAX_RADIUS = 185;
+export const TACTICAL_CAMERA_MIN_BETA = 0.22;
+export const TACTICAL_CAMERA_MAX_BETA = Math.PI * 0.48;
+export const TACTICAL_CAMERA_PAN_SPEED = 48;
+export const TACTICAL_CAMERA_FAST_MULTIPLIER = 2.2;
 
 // Direct-control tuning.
 export const DC_FORWARD_ACCEL = 12;
@@ -59,8 +78,12 @@ export const COLOR = {
   treeTrunk: { r: 0.32, g: 0.22, b: 0.14 },
   treePine: { r: 0.18, g: 0.36, b: 0.22 },
   treeOak: { r: 0.28, g: 0.46, b: 0.28 },
+  shrub: { r: 0.22, g: 0.38, b: 0.16 },
   hill: { r: 0.28, g: 0.36, b: 0.24 },
   fieldPatch: { r: 0.42, g: 0.46, b: 0.24 },
+  dirt: { r: 0.36, g: 0.29, b: 0.2 },
+  roadShoulder: { r: 0.3, g: 0.25, b: 0.18 },
+  sandbag: { r: 0.54, g: 0.48, b: 0.34 },
 
   selection: { r: 0.55, g: 0.95, b: 0.55 },
   objective: { r: 1.0, g: 0.8, b: 0.3 },

@@ -20,6 +20,8 @@ export class TacticalInput {
   private state: SimulationState;
   private downAt: { x: number; y: number; t: number } | null = null;
   private bound = false;
+  private activeTouchPointers = new Set<number>();
+  private suppressTapUntil = 0;
 
   constructor(scene: Scene, camera: ArcRotateCamera, canvas: HTMLCanvasElement, state: SimulationState, cb: TacticalInputCallbacks) {
     this.scene = scene;
@@ -54,10 +56,29 @@ export class TacticalInput {
   };
 
   private onPointerDown = (ev: PointerEvent) => {
+    if (ev.pointerType === 'touch') {
+      this.activeTouchPointers.add(ev.pointerId);
+      if (this.activeTouchPointers.size > 1) {
+        this.suppressTapUntil = performance.now() + 450;
+        this.downAt = null;
+        return;
+      }
+    }
+    if (ev.button === 1) {
+      this.downAt = null;
+      return;
+    }
     this.downAt = { x: ev.clientX, y: ev.clientY, t: performance.now() };
   };
 
   private onPointerUp = (ev: PointerEvent) => {
+    if (ev.pointerType === 'touch') {
+      this.activeTouchPointers.delete(ev.pointerId);
+      if (this.activeTouchPointers.size > 0 || performance.now() < this.suppressTapUntil) {
+        this.downAt = null;
+        return;
+      }
+    }
     if (!this.downAt) return;
     const dx = ev.clientX - this.downAt.x;
     const dy = ev.clientY - this.downAt.y;

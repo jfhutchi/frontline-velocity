@@ -20,6 +20,7 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
   const pause = useGameStore((s) => s.pause);
   const resume = useGameStore((s) => s.resume);
   const returnToMenu = useGameStore((s) => s.returnToMenu);
+  const eventLog = useGameStore((s) => s.eventLog);
 
   const friendlies = summaries.filter((u) => u.faction === 'friendly');
 
@@ -65,6 +66,15 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
             Jump Into Selected
           </button>
           <button
+            disabled={!engine}
+            onClick={() => {
+              AudioManager.play('click');
+              engine?.resetTacticalCamera();
+            }}
+          >
+            Reset Camera
+          </button>
+          <button
             className="danger"
             onClick={() => {
               if (window.confirm('Abort the mission and return to the main menu?')) {
@@ -107,6 +117,20 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
             </button>
           );
         })}
+      </div>
+
+      <div className="mobile-camera-pad">
+        <button onClick={() => engine?.rotateTacticalCamera(-1)}>Rotate -</button>
+        <button onClick={() => engine?.zoomTacticalCamera(-14)}>Zoom In</button>
+        <button onClick={() => engine?.zoomTacticalCamera(14)}>Zoom Out</button>
+        <button onClick={() => engine?.rotateTacticalCamera(1)}>Rotate +</button>
+        <button onClick={() => engine?.resetTacticalCamera()}>Reset</button>
+      </div>
+
+      <div className="event-log">
+        {eventLog.map((event) => (
+          <div key={event.id}>{event.message}</div>
+        ))}
       </div>
 
       <UnitPanel engine={engine} />

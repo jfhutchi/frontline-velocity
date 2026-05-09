@@ -124,5 +124,11 @@ export function makeUnit(opts: {
     isDestroyed: false,
     isPlayerControllable: tpl.isPlayerControllable && opts.faction === 'friendly',
     radius: tpl.radius,
+    currentSpeed: 0,
+    aiState: opts.faction === 'enemy' ? 'guard' : 'idle',
+    aiHome: { ...opts.position },
+    aiLeashRadius: opts.type === 'lightTank' ? 34 : opts.type === 'infantry' ? 22 : 18,
+    aiNextThinkAt: 0,
+    targetLockedUntil: 0,
   };
 }

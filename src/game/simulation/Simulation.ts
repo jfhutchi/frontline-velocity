@@ -7,6 +7,8 @@ import { applyDamage } from './systems/DamageSystem';
 import { updateMovement } from './systems/MovementSystem';
 import { updateObjective } from './systems/ObjectiveSystem';
 import { updateProjectiles, type DamageEvent } from './systems/ProjectileSystem';
+import { pushBattlefieldEvent, resetBattlefieldEventMemory } from './systems/EventLogSystem';
+import { planPath } from './systems/PathfindingSystem';
 
 export type SimulationCallbacks = {
   onPlayerHit: () => void;
@@ -35,18 +37,22 @@ export class Simulation {
   }
 
   private buildInitialState(): SimulationState {
+    resetBattlefieldEventMemory();
     const mission = createOperationCrossroads();
     const units = new Map<string, Unit>();
     for (const u of mission.units) units.set(u.id, u);
-    return {
+    const state: SimulationState = {
       time: 0,
       units,
       projectiles: [],
       effects: [],
+      eventLog: [],
       objective: mission.objective,
       mission,
       result: null,
     };
+    pushBattlefieldEvent(state, 'mission_start', 'Operation Crossroads begun', 999);
+    return state;
   }
 
   /**
@@ -80,7 +86,7 @@ export class Simulation {
   private step(dt: number, controlledUnitId: string | null) {
     this.state.time += dt;
 
-    updateAI(this.state);
+    updateAI(this.state, controlledUnitId);
     updateMovement(this.state, dt, controlledUnitId);
 
     this.freshProjectiles.length = 0;
@@ -102,8 +108,16 @@ export class Simulation {
   issueMoveOrder(unitId: string, destination: Vec3) {
     const u = this.state.units.get(unitId);
     if (!u || u.isDestroyed || !u.isPlayerControllable) return;
-    const order: Order = { kind: 'move', destination: { ...destination } };
+    const path = planPath(this.state, u.position, destination, u.radius);
+    const order: Order = {
+      kind: 'move',
+      destination: { ...destination, y: 0 },
+      path,
+      pathIndex: 0,
+    };
     u.currentOrder = order;
+    u.lastOrderDestination = { ...destination, y: 0 };
+    pushBattlefieldEvent(this.state, `move_${u.id}`, `${u.name} moving`, 1.2);
   }
 
   /** Direct-control: spawn a projectile from the controlled unit immediately. */
@@ -139,6 +153,14 @@ export class Simulation {
       spawnedAt: this.state.time,
       duration: 0.08,
     });
+    this.state.effects.push({
+      id: `smoke_dc_${u.id}_${this.state.time.toFixed(2)}`,
+      kind: 'smoke',
+      position: { ...muzzle },
+      spawnedAt: this.state.time,
+      duration: 0.45,
+      scale: 0.55,
+    });
     return true;
   }
 
@@ -148,6 +170,6 @@ export class Simulation {
     if (!u || u.isDestroyed) return;
     // Restore an idle order so it returns to AI assist behavior after the
     // player jumps back out.
-    u.currentOrder = { kind: 'idle' };
+    u.currentOrder = { kind: 'hold', destination: u.lastOrderDestination };
   }
 }

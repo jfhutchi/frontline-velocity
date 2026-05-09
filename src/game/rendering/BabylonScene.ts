@@ -6,6 +6,7 @@ import {
   Engine,
   HemisphericLight,
   Scene,
+  ShadowGenerator,
   Vector3,
 } from '@babylonjs/core';
 
@@ -15,6 +16,7 @@ export interface BabylonContext {
   camera: ArcRotateCamera;
   hemiLight: HemisphericLight;
   sunLight: DirectionalLight;
+  shadowGenerator: ShadowGenerator;
 }
 
 export function createBabylonContext(canvas: HTMLCanvasElement): BabylonContext {
@@ -36,15 +38,15 @@ export function createBabylonContext(canvas: HTMLCanvasElement): BabylonContext 
   const camera = new ArcRotateCamera(
     'tactical-cam',
     Math.PI * 0.5,
-    Math.PI * 0.32,
+    Math.PI * 0.34,
     140,
     Vector3.Zero(),
     scene,
   );
-  camera.lowerBetaLimit = 0.15;
-  camera.upperBetaLimit = Math.PI * 0.49;
-  camera.lowerRadiusLimit = 35;
-  camera.upperRadiusLimit = 220;
+  camera.lowerBetaLimit = 0.22;
+  camera.upperBetaLimit = Math.PI * 0.48;
+  camera.lowerRadiusLimit = 26;
+  camera.upperRadiusLimit = 185;
   camera.minZ = 0.5;
   camera.maxZ = 600;
   camera.wheelDeltaPercentage = 0.04;
@@ -52,14 +54,18 @@ export function createBabylonContext(canvas: HTMLCanvasElement): BabylonContext 
 
   // Don't auto-attach inputs; CameraController owns input wiring per mode.
   const hemiLight = new HemisphericLight('hemi', new Vector3(0.2, 1, 0.1), scene);
-  hemiLight.intensity = 0.55;
-  hemiLight.groundColor = new Color3(0.1, 0.15, 0.1);
+  hemiLight.intensity = 0.68;
+  hemiLight.groundColor = new Color3(0.13, 0.16, 0.11);
 
-  const sunLight = new DirectionalLight('sun', new Vector3(-0.5, -1, -0.4), scene);
-  sunLight.intensity = 1.1;
-  sunLight.position = new Vector3(60, 80, 40);
+  const sunLight = new DirectionalLight('sun', new Vector3(-0.55, -1, -0.35), scene);
+  sunLight.intensity = 1.25;
+  sunLight.position = new Vector3(65, 95, 48);
+  const shadowGenerator = new ShadowGenerator(1024, sunLight);
+  shadowGenerator.useBlurExponentialShadowMap = true;
+  shadowGenerator.blurKernel = 18;
+  shadowGenerator.setDarkness(0.35);
 
-  return { engine, scene, camera, hemiLight, sunLight };
+  return { engine, scene, camera, hemiLight, sunLight, shadowGenerator };
 }
 
 export function disposeBabylonContext(ctx: BabylonContext) {
