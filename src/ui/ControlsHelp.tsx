@@ -20,28 +20,44 @@ export const ControlsHelp: React.FC<Props> = ({ mode }) => {
               <td>Issue move order</td>
             </tr>
             <tr>
-              <td className="key">1-4</td>
-              <td>Select unit</td>
-            </tr>
-            <tr>
-              <td className="key">Tab</td>
-              <td>Cycle selection</td>
+              <td className="key">1-4 / Tab</td>
+              <td>Select units</td>
             </tr>
             <tr>
               <td className="key">F / Enter</td>
               <td>Jump into vehicle</td>
             </tr>
             <tr>
-              <td className="key">Space</td>
-              <td>Pause / Resume</td>
+              <td className="key">WASD / Arrows</td>
+              <td>Pan camera</td>
             </tr>
             <tr>
-              <td className="key">Esc</td>
-              <td>Pause menu</td>
+              <td className="key">Shift</td>
+              <td>Faster pan</td>
             </tr>
             <tr>
               <td className="key">Wheel</td>
-              <td>Zoom · Drag = orbit</td>
+              <td>Zoom camera</td>
+            </tr>
+            <tr>
+              <td className="key">Q / E</td>
+              <td>Rotate camera</td>
+            </tr>
+            <tr>
+              <td className="key">M-Drag</td>
+              <td>Pan camera</td>
+            </tr>
+            <tr>
+              <td className="key">R / Home</td>
+              <td>Reset camera</td>
+            </tr>
+            <tr>
+              <td className="key">Touch</td>
+              <td>Tap select/order, two-finger pan/pinch</td>
+            </tr>
+            <tr>
+              <td className="key">Esc / Space</td>
+              <td>Pause</td>
             </tr>
           </tbody>
         </table>
@@ -71,11 +87,7 @@ export const ControlsHelp: React.FC<Props> = ({ mode }) => {
               <td>Fire (backup)</td>
             </tr>
             <tr>
-              <td className="key">R</td>
-              <td>Return to command</td>
-            </tr>
-            <tr>
-              <td className="key">Esc</td>
+              <td className="key">R / Esc</td>
               <td>Return to command</td>
             </tr>
           </tbody>

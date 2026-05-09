@@ -17,8 +17,19 @@ export interface UnitSummary {
   reloadSeconds: number;
   reloadProgress: number; // 0..1, 1 = ready to fire
   orderKind: string;
+  orderLabel: string;
+  aiState: string;
+  targetId: string | null;
+  targetName: string | null;
+  isUnderAttack: boolean;
   isDestroyed: boolean;
   isPlayerControllable: boolean;
+}
+
+export interface EventLogEntry {
+  id: string;
+  time: number;
+  message: string;
 }
 
 export interface GameStoreState {
@@ -32,6 +43,7 @@ export interface GameStoreState {
   controlledUnitId: string | null;
 
   unitSummaries: UnitSummary[];
+  eventLog: EventLogEntry[];
   objective: ObjectiveZone | null;
   result: null | 'victory' | 'defeat';
 
@@ -49,6 +61,7 @@ export interface GameStoreState {
   setSelectedUnitId: (id: string | null) => void;
   setControlledUnitId: (id: string | null) => void;
   setUnitSummaries: (s: UnitSummary[]) => void;
+  setEventLog: (events: EventLogEntry[]) => void;
   setObjective: (o: ObjectiveZone) => void;
   enterDirectControl: () => void;
   exitDirectControl: () => void;
@@ -66,6 +79,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   controlledUnitId: null,
 
   unitSummaries: [],
+  eventLog: [],
   objective: null,
   result: null,
   damageFlashTick: 0,
@@ -81,6 +95,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       selectedUnitId: null,
       speedLevel: 'normal',
       speedMultiplier: SPEED_LEVELS.normal,
+      eventLog: [],
     }),
 
   returnToMenu: () =>
@@ -119,6 +134,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   setSelectedUnitId: (id) => set({ selectedUnitId: id }),
   setControlledUnitId: (id) => set({ controlledUnitId: id }),
   setUnitSummaries: (s) => set({ unitSummaries: s }),
+  setEventLog: (events) => set({ eventLog: events }),
   setObjective: (o) => set({ objective: o }),
 
   enterDirectControl: () => {

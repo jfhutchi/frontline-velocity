@@ -17,6 +17,7 @@ export class EffectsRenderer {
   private projEnemyMat: StandardMaterial;
   private mflashMat: StandardMaterial;
   private explosionMat: StandardMaterial;
+  private smokeMat: StandardMaterial;
 
   constructor(scene: Scene) {
     this.scene = scene;
@@ -39,6 +40,11 @@ export class EffectsRenderer {
     this.explosionMat.diffuseColor = new Color3(1, 0.55, 0.25);
     this.explosionMat.emissiveColor = new Color3(1, 0.55, 0.25);
     this.explosionMat.specularColor = new Color3(0, 0, 0);
+
+    this.smokeMat = new StandardMaterial('smoke', scene);
+    this.smokeMat.diffuseColor = new Color3(0.34, 0.34, 0.31);
+    this.smokeMat.specularColor = new Color3(0, 0, 0);
+    this.smokeMat.alpha = 0.55;
   }
 
   update(state: SimulationState) {
@@ -52,11 +58,13 @@ export class EffectsRenderer {
       seen.add(p.id);
       let m = this.projectileMeshes.get(p.id);
       if (!m) {
-        m = MeshBuilder.CreateSphere(`proj_${p.id}`, { diameter: 0.5, segments: 6 }, this.scene);
+        m = MeshBuilder.CreateCylinder(`proj_${p.id}`, { diameter: 0.16, height: 2.4, tessellation: 6 }, this.scene);
+        m.rotation.x = Math.PI / 2;
         m.material = p.faction === 'friendly' ? this.projFriendlyMat : this.projEnemyMat;
         this.projectileMeshes.set(p.id, m);
       }
       m.position.set(p.position.x, 1.5, p.position.z);
+      m.rotation.y = Math.atan2(p.velocity.x, p.velocity.z);
     }
     for (const [id, mesh] of this.projectileMeshes) {
       if (!seen.has(id)) {
@@ -81,7 +89,7 @@ export class EffectsRenderer {
       if (!vis) continue;
       const t = (time - e.spawnedAt) / e.duration;
       const tt = Math.max(0, Math.min(1, t));
-      const scale = vis.baseScale * (e.kind === 'explosion' ? 1 + tt * 1.6 : e.kind === 'muzzleFlash' ? 1 - tt * 0.6 : 1 + tt);
+      const scale = vis.baseScale * (e.kind === 'explosion' ? 1 + tt * 1.6 : e.kind === 'muzzleFlash' ? 1 - tt * 0.6 : e.kind === 'smoke' ? 1 + tt * 1.2 : 1 + tt);
       vis.mesh.scaling.set(scale, scale, scale);
       const mat = vis.mesh.material as StandardMaterial | null;
       if (mat) {
@@ -113,6 +121,16 @@ export class EffectsRenderer {
       mesh = MeshBuilder.CreateSphere(`fx_${e.id}`, { diameter: 0.9, segments: 6 }, this.scene);
       const mat = this.mflashMat.clone(`hit_${e.id}`);
       mat.alpha = 0.7;
+      mesh.material = mat;
+    } else if (e.kind === 'smoke') {
+      mesh = MeshBuilder.CreateSphere(`fx_${e.id}`, { diameter: 1.0, segments: 8 }, this.scene);
+      const mat = this.smokeMat.clone(`smoke_${e.id}`);
+      mat.alpha = 0.45;
+      mesh.material = mat;
+    } else if (e.kind === 'wreck') {
+      mesh = MeshBuilder.CreateSphere(`fx_${e.id}`, { diameter: 1.2, segments: 8 }, this.scene);
+      const mat = this.smokeMat.clone(`wreck_${e.id}`);
+      mat.alpha = 0.35;
       mesh.material = mat;
     } else {
       return null;

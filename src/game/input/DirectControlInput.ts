@@ -12,6 +12,7 @@ export interface DirectInputState {
 export class DirectControlInput {
   private keys = new Set<string>();
   private fireDown = false;
+  private fireQueued = false;
   private bound = false;
   private touchForward = 0;
   private touchTurn = 0;
@@ -25,6 +26,7 @@ export class DirectControlInput {
     window.addEventListener('keyup', this.onKeyUp);
     window.addEventListener('mousedown', this.onMouseDown);
     window.addEventListener('mouseup', this.onMouseUp);
+    window.addEventListener('click', this.onClick);
     window.addEventListener('blur', this.onBlur);
   }
 
@@ -35,6 +37,7 @@ export class DirectControlInput {
     window.removeEventListener('keyup', this.onKeyUp);
     window.removeEventListener('mousedown', this.onMouseDown);
     window.removeEventListener('mouseup', this.onMouseUp);
+    window.removeEventListener('click', this.onClick);
     window.removeEventListener('blur', this.onBlur);
     this.keys.clear();
     this.fireDown = false;
@@ -61,7 +64,8 @@ export class DirectControlInput {
     turn += this.touchTurn;
     forward = Math.max(-1, Math.min(1, forward));
     turn = Math.max(-1, Math.min(1, turn));
-    const fire = this.fireDown || this.keys.has(' ') || this.touchFire;
+    const fire = this.fireDown || this.fireQueued || this.keys.has(' ') || this.touchFire;
+    this.fireQueued = false;
     return { forward, turn, fire, aimYaw: this.mouseAimYaw };
   }
 
@@ -74,13 +78,22 @@ export class DirectControlInput {
     this.keys.delete(ev.key.toLowerCase());
   };
   private onMouseDown = (ev: MouseEvent) => {
-    if (ev.button === 0) this.fireDown = true;
+    if (ev.button === 0) {
+      this.fireDown = true;
+      this.fireQueued = true;
+    }
   };
   private onMouseUp = (ev: MouseEvent) => {
     if (ev.button === 0) this.fireDown = false;
   };
+  private onClick = (ev: MouseEvent) => {
+    if (ev.button !== 0) return;
+    if (ev.target instanceof HTMLElement && ev.target.closest('button')) return;
+    this.fireQueued = true;
+  };
   private onBlur = () => {
     this.keys.clear();
     this.fireDown = false;
+    this.fireQueued = false;
   };
 }

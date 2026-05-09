@@ -22,6 +22,7 @@ export const DirectControlHUD: React.FC<Props> = ({ engine }) => {
         <span className="name">{u.name}</span> · {u.weaponName} · {objective ? `Cap ${(objective.heldSeconds || 0).toFixed(0)}/${objective.requiredHoldSeconds}s` : ''}
       </div>
       <div className="dc-crosshair" />
+      <div className="dc-reload-ring" style={{ ['--reload' as string]: `${Math.round(u.reloadProgress * 100)}%` }} />
       <div className="dc-bottom-panel">
         <div className="stat">
           <span className="label">Health</span>

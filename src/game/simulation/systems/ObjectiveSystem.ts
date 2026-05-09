@@ -1,5 +1,6 @@
 import type { SimulationState } from '../../types';
 import { v3 } from '../math';
+import { pushBattlefieldEvent } from './EventLogSystem';
 
 export function updateObjective(state: SimulationState, dt: number) {
   const obj = state.objective;
@@ -22,6 +23,19 @@ export function updateObjective(state: SimulationState, dt: number) {
   obj.occupiedByFriendly = friendlyInside;
   obj.contested = friendlyInside && enemyInside;
 
+  const nextStatus = obj.captured
+    ? 'captured'
+    : obj.contested
+      ? 'contested'
+      : obj.occupiedByFriendly
+        ? 'friendly'
+        : 'empty';
+  if (obj.lastStatus !== nextStatus) {
+    obj.lastStatus = nextStatus;
+    if (nextStatus === 'contested') pushBattlefieldEvent(state, 'objective_contested', 'Crossroads contested', 3);
+    if (nextStatus === 'friendly') pushBattlefieldEvent(state, 'objective_hold', 'Friendly unit holding crossroads', 4);
+  }
+
   if (obj.captured) {
     return;
   }
@@ -31,6 +45,8 @@ export function updateObjective(state: SimulationState, dt: number) {
     if (obj.heldSeconds >= obj.requiredHoldSeconds && aliveFriendlyCombatants > 0) {
       obj.captured = true;
       state.result = 'victory';
+      obj.lastStatus = 'captured';
+      pushBattlefieldEvent(state, 'objective_captured', 'Crossroads secured', 999);
     }
   } else if (!friendlyInside) {
     // Slowly decay if abandoned, but don't reset entirely so an interrupted
@@ -40,5 +56,6 @@ export function updateObjective(state: SimulationState, dt: number) {
 
   if (aliveFriendlyCombatants === 0) {
     state.result = 'defeat';
+    pushBattlefieldEvent(state, 'friendly_defeat', 'All friendly units lost', 999);
   }
 }

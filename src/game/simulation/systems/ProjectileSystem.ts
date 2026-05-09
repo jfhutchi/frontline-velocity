@@ -1,5 +1,6 @@
 import { MAP_HALF, PROJECTILE_HIT_RADIUS, SPLASH_BASE_RADIUS } from '../../constants';
 import type { Projectile, SimulationState, Unit } from '../../types';
+import { segmentHitsBuilding } from './PathfindingSystem';
 
 export interface DamageEvent {
   targetId: string;
@@ -17,6 +18,7 @@ export function updateProjectiles(
   const next: Projectile[] = [];
   for (const p of state.projectiles) {
     p.remainingTime -= dt;
+    const previous = { ...p.position };
     p.position.x += p.velocity.x * dt;
     p.position.z += p.velocity.z * dt;
     p.position.y = Math.max(0, p.position.y); // stay on surface
@@ -38,15 +40,33 @@ export function updateProjectiles(
       continue; // off map, drop
     }
 
+    if (segmentHitsBuilding(state, previous, p.position, 0.45)) {
+      state.effects.push({
+        id: `wallhit_${p.id}`,
+        kind: 'hit',
+        position: { ...p.position },
+        spawnedAt: state.time,
+        duration: 0.22,
+        scale: 0.85,
+      });
+      state.effects.push({
+        id: `wallsmoke_${p.id}`,
+        kind: 'smoke',
+        position: { ...p.position },
+        spawnedAt: state.time,
+        duration: 0.65,
+        scale: 0.75,
+      });
+      continue;
+    }
+
     // Check collision with units.
     let hit: Unit | null = null;
     for (const u of state.units.values()) {
       if (u.isDestroyed) continue;
       if (u.faction === p.faction) continue;
-      const dx = u.position.x - p.position.x;
-      const dz = u.position.z - p.position.z;
       const r = u.radius + PROJECTILE_HIT_RADIUS;
-      if (dx * dx + dz * dz <= r * r) {
+      if (distancePointToSegmentXZ(u.position, previous, p.position) <= r) {
         hit = u;
         break;
       }
@@ -66,6 +86,22 @@ export function updateProjectiles(
         spawnedAt: state.time,
         duration: 0.5,
         scale: 1 + (p.splashRadius ?? SPLASH_BASE_RADIUS) * 0.15,
+      });
+      state.effects.push({
+        id: `spark_${p.id}`,
+        kind: 'hit',
+        position: { ...p.position },
+        spawnedAt: state.time,
+        duration: 0.18,
+        scale: 0.8,
+      });
+      state.effects.push({
+        id: `smokehit_${p.id}`,
+        kind: 'smoke',
+        position: { ...p.position },
+        spawnedAt: state.time,
+        duration: 0.75,
+        scale: 0.9,
       });
 
       if (p.splashRadius && p.splashRadius > 0) {
@@ -93,4 +129,15 @@ export function updateProjectiles(
     next.push(p);
   }
   state.projectiles = next;
+}
+
+function distancePointToSegmentXZ(point: { x: number; z: number }, a: { x: number; z: number }, b: { x: number; z: number }) {
+  const vx = b.x - a.x;
+  const vz = b.z - a.z;
+  const lenSq = vx * vx + vz * vz;
+  if (lenSq < 1e-6) return Math.hypot(point.x - a.x, point.z - a.z);
+  const t = Math.max(0, Math.min(1, ((point.x - a.x) * vx + (point.z - a.z) * vz) / lenSq));
+  const px = a.x + vx * t;
+  const pz = a.z + vz * t;
+  return Math.hypot(point.x - px, point.z - pz);
 }

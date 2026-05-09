@@ -70,8 +70,17 @@ export const UnitPanel: React.FC<Props> = ({ engine }) => {
       </div>
       <div className="stat-row">
         <span>Order</span>
-        <span className="value">{unit.orderKind}</span>
+        <span className="value">{unit.orderLabel}</span>
       </div>
+      <div className="stat-row">
+        <span>AI State</span>
+        <span className="value">{unit.aiState}</span>
+      </div>
+      <div className="stat-row">
+        <span>Target</span>
+        <span className="value">{unit.targetName ?? 'None'}</span>
+      </div>
+      {unit.isUnderAttack && <div className="under-fire">Under fire</div>}
       <div className="panel-actions">
         <button
           disabled={unit.isDestroyed || !unit.isPlayerControllable}

@@ -25,8 +25,8 @@ export const MainMenu: React.FC = () => {
             AudioManager.ensure();
             AudioManager.play('click');
             window.alert(
-              'Steel Command: Frontline Velocity is a spiritual successor to a 1996 DOS tactical game. ' +
-                'All assets are original. v0.0.1 ships one playable mission.',
+                'Steel Command: Frontline Velocity is a spiritual successor to a 1996 DOS tactical game. ' +
+                'All assets are original. v0.0.2 ships one playable mission with improved command AI and camera controls.',
             );
           }}
         >

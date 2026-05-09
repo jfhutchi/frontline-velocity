@@ -9,7 +9,15 @@ import { TerrainRenderer } from './rendering/TerrainRenderer';
 import { UnitRenderer } from './rendering/UnitRenderer';
 import { Simulation } from './simulation/Simulation';
 import { useGameStore, type UnitSummary } from './state/gameStore';
-import type { GameMode, Unit } from './types';
+import type { BattlefieldEvent, GameMode, Unit } from './types';
+import { resolveUnitAgainstObstacles } from './simulation/systems/PathfindingSystem';
+
+declare global {
+  interface Window {
+    render_game_to_text?: () => string;
+    advanceTime?: (ms: number) => void;
+  }
+}
 
 export class GameEngine {
   private ctx: BabylonContext;
@@ -37,8 +45,8 @@ export class GameEngine {
     this.simulation = new Simulation({
       onPlayerHit: () => useGameStore.getState().flashDamage(),
     });
-    this.terrainRenderer = new TerrainRenderer(this.ctx.scene);
-    this.unitRenderer = new UnitRenderer(this.ctx.scene);
+    this.terrainRenderer = new TerrainRenderer(this.ctx.scene, this.ctx.shadowGenerator);
+    this.unitRenderer = new UnitRenderer(this.ctx.scene, this.ctx.shadowGenerator);
     this.effectsRenderer = new EffectsRenderer(this.ctx.scene);
     this.cameraController = new CameraController(this.ctx.scene, this.ctx.camera, canvas);
     this.tacticalInput = new TacticalInput(this.ctx.scene, this.ctx.camera, canvas, this.simulation.state, {
@@ -64,7 +72,8 @@ export class GameEngine {
       this.resizeObserver.observe(canvas);
     }
     // Frame the camera over the friendly starting area.
-    this.cameraController.centerOn(-45, 70);
+    this.cameraController.resetTacticalCamera(true);
+    this.exposeTestHooks();
 
     this.publishSummaries(true);
   }
@@ -72,6 +81,9 @@ export class GameEngine {
   dispose() {
     this.tacticalInput.detach();
     this.directInput.detach();
+    this.cameraController.dispose();
+    if (window.render_game_to_text === this.renderGameToText) window.render_game_to_text = undefined;
+    if (window.advanceTime === this.advanceTime) window.advanceTime = undefined;
     window.removeEventListener('resize', this.handleResize);
     this.resizeObserver?.disconnect();
     this.unitRenderer.dispose();
@@ -86,11 +98,11 @@ export class GameEngine {
     this.terrainRenderer.build(this.simulation.state.mission);
     this.unitRenderer.dispose();
     this.effectsRenderer.dispose();
-    this.unitRenderer = new UnitRenderer(this.ctx.scene);
+    this.unitRenderer = new UnitRenderer(this.ctx.scene, this.ctx.shadowGenerator);
     this.effectsRenderer = new EffectsRenderer(this.ctx.scene);
     this.resultEmitted = false;
     this.cameraController.activate('tactical');
-    this.cameraController.centerOn(-45, 70);
+    this.cameraController.resetTacticalCamera(true);
     this.publishSummaries(true);
   }
 
@@ -133,6 +145,7 @@ export class GameEngine {
       this.simulation.update(rawDt, speed, controlledId);
     }
     this.tacticalInput.setSimulationState(this.simulation.state);
+    this.cameraController.update(rawDt);
 
     // Render syncing.
     this.syncRenderers();
@@ -225,6 +238,7 @@ export class GameEngine {
     const newZ = unit.position.z + cos * this.vehicleVelocity * dt;
     unit.position.x = Math.max(-MAP_HALF + 2, Math.min(MAP_HALF - 2, newX));
     unit.position.z = Math.max(-MAP_HALF + 2, Math.min(MAP_HALF - 2, newZ));
+    resolveUnitAgainstObstacles(unit, this.simulation.state);
 
     // Turret aim: face camera direction. We use the chase camera's yaw.
     // Simpler: just keep turret aligned with hull (turret = 0 in hull-local)
@@ -233,7 +247,10 @@ export class GameEngine {
 
     if (input.fire) {
       const fired = this.simulation.fireFromControlled(controlledId);
-      if (fired) AudioManager.play('fire');
+      if (fired) {
+        this.cameraController.addRecoilShake();
+        AudioManager.play('fire');
+      }
     }
   }
 
@@ -246,7 +263,8 @@ export class GameEngine {
       activeIds.add(u.id);
       const isSelected = store.selectedUnitId === u.id;
       const isControlled = store.controlledUnitId === u.id;
-      this.unitRenderer.update(u, isSelected, isControlled);
+      const target = u.targetId ? state.units.get(u.targetId) ?? null : null;
+      this.unitRenderer.update(u, isSelected, isControlled, target, state.time);
     }
     this.unitRenderer.removeMissing(activeIds);
 
@@ -258,7 +276,7 @@ export class GameEngine {
     const state = this.simulation.state;
     const summaries: UnitSummary[] = [];
     for (const u of state.units.values()) {
-      summaries.push(toSummary(u, state.time));
+      summaries.push(toSummary(u, state.time, state.units));
     }
     const store = useGameStore.getState();
     if (!force) {
@@ -269,7 +287,15 @@ export class GameEngine {
         for (let i = 0; i < prev.length; i += 1) {
           const a = prev[i];
           const b = summaries[i];
-          if (a.id !== b.id || a.health !== b.health || a.isDestroyed !== b.isDestroyed || Math.abs(a.reloadProgress - b.reloadProgress) > 0.05 || a.orderKind !== b.orderKind) {
+          if (
+            a.id !== b.id ||
+            a.health !== b.health ||
+            a.isDestroyed !== b.isDestroyed ||
+            Math.abs(a.reloadProgress - b.reloadProgress) > 0.05 ||
+            a.orderKind !== b.orderKind ||
+            a.targetName !== b.targetName ||
+            a.aiState !== b.aiState
+          ) {
             same = false;
             break;
           }
@@ -277,12 +303,14 @@ export class GameEngine {
         if (same) {
           // Still update objective, but don't replace summaries.
           store.setObjective({ ...state.objective });
+          store.setEventLog([...state.eventLog]);
           return;
         }
       }
     }
     store.setUnitSummaries(summaries);
     store.setObjective({ ...state.objective });
+    store.setEventLog([...state.eventLog]);
   }
 
   jumpIntoSelected() {
@@ -314,15 +342,75 @@ export class GameEngine {
     this.cameraController.centerOn(u.position.x, u.position.z);
   }
 
+  resetTacticalCamera() {
+    this.cameraController.resetTacticalCamera();
+  }
+
+  rotateTacticalCamera(direction: number) {
+    this.cameraController.rotateTactical(direction);
+  }
+
+  zoomTacticalCamera(delta: number) {
+    this.cameraController.zoomTactical(delta);
+  }
+
   /** Returns simulation reference for higher-level use cases. */
   getSimulation() {
     return this.simulation;
   }
+
+  private exposeTestHooks() {
+    window.render_game_to_text = this.renderGameToText;
+    window.advanceTime = this.advanceTime;
+  }
+
+  private renderGameToText = () => {
+    const state = this.simulation.state;
+    const store = useGameStore.getState();
+    const units = [...state.units.values()].map((u) => ({
+      id: u.id,
+      name: u.name,
+      faction: u.faction,
+      type: u.type,
+      x: Number(u.position.x.toFixed(1)),
+      z: Number(u.position.z.toFixed(1)),
+      health: Math.round(u.health),
+      order: u.currentOrder.kind,
+      ai: u.aiState,
+      targetId: u.targetId,
+      destroyed: u.isDestroyed,
+    }));
+    const payload = {
+      note: 'World coordinates use x east/west and z north/south on the ground plane.',
+      screen: store.screen,
+      selectedUnitId: store.selectedUnitId,
+      controlledUnitId: store.controlledUnitId,
+      objective: {
+        heldSeconds: Number(state.objective.heldSeconds.toFixed(1)),
+        contested: state.objective.contested,
+        captured: state.objective.captured,
+      },
+      units,
+      events: state.eventLog.map((event: BattlefieldEvent) => event.message),
+    };
+    return JSON.stringify(payload);
+  };
+
+  private advanceTime = (ms: number) => {
+    const store = useGameStore.getState();
+    const speed = store.paused ? 0 : SPEED_LEVELS[store.speedLevel];
+    this.simulation.update(Math.max(0, ms) / 1000, speed, store.controlledUnitId);
+    this.syncRenderers();
+    this.publishSummaries(true);
+    this.ctx.scene.render();
+  };
 }
 
-function toSummary(u: Unit, time: number): UnitSummary {
+function toSummary(u: Unit, time: number, units: Map<string, Unit>): UnitSummary {
   const sinceFire = time - u.weapon.lastFiredAt;
   const reloadProgress = Math.max(0, Math.min(1, sinceFire / u.weapon.reloadSeconds));
+  const target = u.targetId ? units.get(u.targetId) : undefined;
+  const orderLabel = formatOrder(u);
   return {
     id: u.id,
     name: u.name,
@@ -337,9 +425,24 @@ function toSummary(u: Unit, time: number): UnitSummary {
     reloadSeconds: u.weapon.reloadSeconds,
     reloadProgress,
     orderKind: u.currentOrder.kind,
+    orderLabel,
+    aiState: u.aiState,
+    targetId: u.targetId,
+    targetName: target?.name ?? null,
+    isUnderAttack: u.lastDamagedAt !== undefined && time - u.lastDamagedAt < 1.2,
     isDestroyed: u.isDestroyed,
     isPlayerControllable: u.isPlayerControllable && (u.type === 'mediumTank' || u.type === 'reconJeep'),
   };
+}
+
+function formatOrder(u: Unit): string {
+  if (u.isDestroyed) return 'Destroyed';
+  if (u.targetId && u.currentOrder.kind === 'move') return 'Attack-moving';
+  if (u.targetId) return 'Engaging';
+  if (u.currentOrder.kind === 'move') return 'Moving';
+  if (u.currentOrder.kind === 'patrol') return 'Patrol';
+  if (u.currentOrder.kind === 'hold') return 'Idle';
+  return 'Idle';
 }
 
 export type GameModeAlias = GameMode;
