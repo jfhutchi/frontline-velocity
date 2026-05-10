@@ -51,8 +51,24 @@ export const TACTICAL_CAMERA_MIN_RADIUS = 26;
 export const TACTICAL_CAMERA_MAX_RADIUS = 185;
 export const TACTICAL_CAMERA_MIN_BETA = 0.22;
 export const TACTICAL_CAMERA_MAX_BETA = Math.PI * 0.48;
-export const TACTICAL_CAMERA_PAN_SPEED = 48;
+export const TACTICAL_CAMERA_PAN_SPEED = 58;
 export const TACTICAL_CAMERA_FAST_MULTIPLIER = 2.2;
+/** Edge-scroll activation distance from the viewport edge in CSS pixels. */
+export const TACTICAL_EDGE_SCROLL_PIXELS = 28;
+/** Maximum edge-scroll speed in world units / second at the very edge. */
+export const TACTICAL_EDGE_SCROLL_SPEED = 90;
+/** Mouse wheel zoom step in world units per wheel notch. */
+export const TACTICAL_ZOOM_WHEEL_STEP = 12;
+/** How quickly the camera lerps to the desired pan position; higher = snappier. */
+export const TACTICAL_CAMERA_PAN_SMOOTHING = 22;
+/** How quickly zoom interpolates. */
+export const TACTICAL_CAMERA_ZOOM_SMOOTHING = 14;
+/** How quickly rotate interpolates. */
+export const TACTICAL_CAMERA_ROTATE_SMOOTHING = 16;
+/** Q/E rotate angular speed in radians/sec. */
+export const TACTICAL_CAMERA_ROTATE_SPEED = 1.6;
+/** Threshold (px) past which a pointer-down counts as a drag rather than a click. */
+export const SELECTION_BOX_DRAG_THRESHOLD = 6;
 
 // Direct-control tuning.
 export const DC_FORWARD_ACCEL = 12;

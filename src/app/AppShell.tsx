@@ -19,7 +19,7 @@ export const AppShell: React.FC = () => {
         screen === 'defeat') && <GameRoot />}
       {screen === 'victory' && <EndMissionScreen result="victory" />}
       {screen === 'defeat' && <EndMissionScreen result="defeat" />}
-      <div className="version-label">v0.0.2</div>
+      <div className="version-label">v0.0.3</div>
     </div>
   );
 };

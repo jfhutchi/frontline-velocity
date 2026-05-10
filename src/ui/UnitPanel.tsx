@@ -18,14 +18,16 @@ const UNIT_LABELS: Record<string, string> = {
 export const UnitPanel: React.FC<Props> = ({ engine }) => {
   const summaries = useGameStore((s) => s.unitSummaries);
   const selectedId = useGameStore((s) => s.selectedUnitId);
+  const selectedIds = useGameStore((s) => s.selectedUnitIds);
   const unit = summaries.find((u) => u.id === selectedId);
+  const selectedCount = selectedIds.length;
 
   if (!unit) {
     return (
-      <div className="unit-panel">
+      <div className="unit-panel game-ui-panel" data-ui-interactive="true">
         <h4>No Unit Selected</h4>
         <div className="stat-row">
-          <span>Click a friendly marker, or press 1-4.</span>
+          <span>Left-click a friendly unit, drag to box-select, or press 1-4.</span>
         </div>
       </div>
     );
@@ -35,10 +37,13 @@ export const UnitPanel: React.FC<Props> = ({ engine }) => {
   const lowHealth = hpPct < 35;
 
   return (
-    <div className="unit-panel">
+    <div className="unit-panel game-ui-panel" data-ui-interactive="true">
       <h4>
         {unit.name} <span style={{ color: 'var(--fg-1)', fontSize: 11 }}>({UNIT_LABELS[unit.type] ?? unit.type})</span>
       </h4>
+      {selectedCount > 1 && (
+        <div className="multi-selection-tag">+{selectedCount - 1} more selected</div>
+      )}
       <div className="health-bar">
         <div className={`health-fill${lowHealth ? ' low' : ''}`} style={{ width: `${hpPct}%` }} />
       </div>
@@ -90,7 +95,7 @@ export const UnitPanel: React.FC<Props> = ({ engine }) => {
           }}
           title={unit.isPlayerControllable ? 'Take direct control of this vehicle' : 'This unit is not directly controllable'}
         >
-          Jump In (F)
+          Jump In (Enter)
         </button>
         <button
           onClick={() => {
@@ -98,7 +103,7 @@ export const UnitPanel: React.FC<Props> = ({ engine }) => {
             engine?.centerCameraOnSelected();
           }}
         >
-          Center Camera
+          Center (F)
         </button>
       </div>
     </div>

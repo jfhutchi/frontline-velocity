@@ -12,8 +12,10 @@ interface Props {
 export const TacticalHUD: React.FC<Props> = ({ engine }) => {
   const summaries = useGameStore((s) => s.unitSummaries);
   const selectedId = useGameStore((s) => s.selectedUnitId);
+  const selectedIds = useGameStore((s) => s.selectedUnitIds);
   const controlledId = useGameStore((s) => s.controlledUnitId);
   const setSelected = useGameStore((s) => s.setSelectedUnitId);
+  const toggleSelection = useGameStore((s) => s.toggleUnitInSelection);
   const speedLevel = useGameStore((s) => s.speedLevel);
   const setSpeed = useGameStore((s) => s.setSpeedLevel);
   const paused = useGameStore((s) => s.paused);
@@ -23,10 +25,12 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
   const eventLog = useGameStore((s) => s.eventLog);
 
   const friendlies = summaries.filter((u) => u.faction === 'friendly');
+  const selectedSet = new Set(selectedIds);
+  const selectedCount = selectedIds.length;
 
   return (
     <>
-      <div className="tactical-bar-top">
+      <div className="tactical-bar-top game-ui-panel" data-ui-interactive="true">
         <ObjectivePanel />
         <div className="tactical-controls">
           <button
@@ -88,13 +92,21 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
         </div>
       </div>
 
-      <div className="unit-roster">
+      <div className="unit-roster game-ui-panel" data-ui-interactive="true">
+        {selectedCount > 1 && (
+          <div className="roster-group-header">
+            {selectedCount} units selected
+          </div>
+        )}
         {friendlies.map((u, idx) => {
-          const isSelected = u.id === selectedId;
+          const isPrimary = u.id === selectedId;
+          const isSelected = selectedSet.has(u.id);
           const isControlled = u.id === controlledId;
-          const hpPct = Math.round((u.health / u.maxHealth) * 100);
+          const hpPct = Math.max(0, Math.min(100, Math.round((u.health / u.maxHealth) * 100)));
           const cls = [
-            isSelected ? 'selected' : '',
+            'unit-row',
+            isPrimary ? 'primary' : '',
+            isSelected && !isPrimary ? 'selected' : '',
             isControlled ? 'controlled' : '',
             u.isDestroyed ? 'dead' : '',
           ]
@@ -104,22 +116,30 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
             <button
               key={u.id}
               className={cls}
-              onClick={() => {
+              onClick={(ev) => {
                 if (u.isDestroyed) return;
                 AudioManager.play('click');
-                setSelected(u.id);
+                if (ev.shiftKey) toggleSelection(u.id);
+                else setSelected(u.id);
               }}
+              title={`${u.name} — ${hpPct}% health`}
             >
-              <span>
-                [{idx + 1}] {u.name}
-              </span>
-              <span className={`roster-hp${hpPct < 35 ? ' low' : ''}`}>{hpPct}%</span>
+              <div className="unit-row-top">
+                <span className="unit-row-name">[{idx + 1}] {u.name}</span>
+                <span className={`unit-row-hp${hpPct < 35 ? ' low' : ''}`}>{hpPct}%</span>
+              </div>
+              <div className="unit-row-hpbar">
+                <div
+                  className={`unit-row-hpfill${hpPct < 35 ? ' low' : ''}`}
+                  style={{ width: `${u.isDestroyed ? 0 : hpPct}%` }}
+                />
+              </div>
             </button>
           );
         })}
       </div>
 
-      <div className="mobile-camera-pad">
+      <div className="mobile-camera-pad game-ui-panel" data-ui-interactive="true">
         <button onClick={() => engine?.rotateTacticalCamera(-1)}>Rotate -</button>
         <button onClick={() => engine?.zoomTacticalCamera(-14)}>Zoom In</button>
         <button onClick={() => engine?.zoomTacticalCamera(14)}>Zoom Out</button>

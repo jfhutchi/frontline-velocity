@@ -17,15 +17,24 @@ interface UnitVisual {
   hull: Mesh;
   turretPivot?: TransformNode;
   selectionRing: Mesh;
+  hoverRing: Mesh;
   threatRing: Mesh;
   marker: Mesh;
+  /** Parent transform for health-bar bg+fill so they always move together. */
+  hpBarPivot: TransformNode;
   hpBarBg: Mesh;
   hpBarFill: Mesh;
+  /** Constant width of the bar background (used to clip the fill). */
+  hpBarWidth: number;
   destinationMarker: Mesh;
   attackLine?: LinesMesh;
   isDestroyed: boolean;
   type: UnitType;
 }
+
+const HP_BAR_WIDTH = 2.8;
+const HP_BAR_HEIGHT = 0.22;
+const HP_BAR_FILL_INSET = 0.05; // small inset so fill clearly sits inside the bg
 
 export class UnitRenderer {
   private scene: Scene;
@@ -62,14 +71,19 @@ export class UnitRenderer {
     const sel = mk('selectionRing', COLOR.selection);
     sel.emissiveColor = new Color3(0.3, 0.7, 0.3);
     sel.alpha = 0.85;
+    const hover = mk('hoverRing', { r: 0.85, g: 0.95, b: 0.55 });
+    hover.emissiveColor = new Color3(0.55, 0.7, 0.25);
+    hover.alpha = 0.55;
     const threat = mk('threatRing', { r: 1, g: 0.34, b: 0.22 });
     threat.emissiveColor = new Color3(0.8, 0.18, 0.08);
     threat.alpha = 0.7;
     const dest = mk('destination', { r: 0.95, g: 0.78, b: 0.28 });
     dest.emissiveColor = new Color3(0.6, 0.42, 0.12);
     dest.alpha = 0.78;
-    const hpBg = mk('hpBg', { r: 0.05, g: 0.05, b: 0.05 });
-    hpBg.alpha = 0.85;
+    // Health-bar background: opaque dark plate that the colored fill sits inside.
+    const hpBg = mk('hpBg', { r: 0.04, g: 0.04, b: 0.04 });
+    hpBg.alpha = 0.92;
+    hpBg.emissiveColor = new Color3(0.04, 0.04, 0.04);
     const hpFill = mk('hpFill', { r: 0.4, g: 0.85, b: 0.4 });
     hpFill.emissiveColor = new Color3(0.3, 0.7, 0.3);
     const hpLow = mk('hpLow', { r: 0.92, g: 0.25, b: 0.22 });
@@ -212,6 +226,12 @@ export class UnitRenderer {
     selectionRing.position.y = 0.08;
     selectionRing.isVisible = false;
 
+    const hoverRing = MeshBuilder.CreateTorus(`hover_${unit.id}`, { diameter: unit.radius * 3.0, thickness: 0.12, tessellation: 24 }, this.scene);
+    hoverRing.material = this.materials.hoverRing;
+    hoverRing.parent = root;
+    hoverRing.position.y = 0.07;
+    hoverRing.isVisible = false;
+
     const threatRing = MeshBuilder.CreateTorus(`threat_${unit.id}`, { diameter: unit.radius * 3.8, thickness: 0.14, tessellation: 24 }, this.scene);
     threatRing.material = this.materials.threatRing;
     threatRing.parent = root;
@@ -223,35 +243,50 @@ export class UnitRenderer {
     destinationMarker.position.y = 0.1;
     destinationMarker.isVisible = false;
 
-    const hpBarBg = MeshBuilder.CreatePlane(`hpbg_${unit.id}`, { width: 2.8, height: 0.2 }, this.scene);
-    hpBarBg.material = this.materials.hpBg;
-    hpBarBg.parent = root;
-    hpBarBg.position.y = 3.35;
-    hpBarBg.billboardMode = 7;
+    // Health bar: bg and fill share a single billboarded pivot above the unit.
+    // Both meshes are children of the pivot, so their world transforms can never
+    // drift apart regardless of camera angle, unit rotation, or terrain pitch.
+    const hpBarPivot = new TransformNode(`hpPivot_${unit.id}`, this.scene);
+    hpBarPivot.parent = root;
+    hpBarPivot.position.y = 3.45;
 
-    const hpBarFill = MeshBuilder.CreatePlane(`hpfill_${unit.id}`, { width: 2.7, height: 0.15 }, this.scene);
+    const hpBarBg = MeshBuilder.CreatePlane(`hpbg_${unit.id}`, { width: HP_BAR_WIDTH, height: HP_BAR_HEIGHT }, this.scene);
+    hpBarBg.material = this.materials.hpBg;
+    hpBarBg.parent = hpBarPivot;
+    hpBarBg.billboardMode = 7; // billboard the bg; fill rides along as a child
+    hpBarBg.renderingGroupId = 1;
+
+    const fillWidth = HP_BAR_WIDTH - HP_BAR_FILL_INSET * 2;
+    const hpBarFill = MeshBuilder.CreatePlane(`hpfill_${unit.id}`, { width: fillWidth, height: HP_BAR_HEIGHT - HP_BAR_FILL_INSET * 2 }, this.scene);
     hpBarFill.material = this.materials.hpFill;
-    hpBarFill.parent = root;
-    hpBarFill.position.y = 3.35;
-    hpBarFill.billboardMode = 7;
+    // Anchor the fill at the LEFT edge of the bg by parenting to the bg and
+    // shifting the pivot by half its width — we then scale .x in [0..1] from
+    // that left edge so the fill always grows rightward inside the bg.
+    hpBarFill.parent = hpBarBg;
+    hpBarFill.position.x = -fillWidth / 2;
+    hpBarFill.setPivotPoint(new Vector3(fillWidth / 2, 0, 0));
     hpBarFill.position.z = -0.001;
+    hpBarFill.renderingGroupId = 1;
 
     return {
       root,
       hull,
       turretPivot,
       selectionRing,
+      hoverRing,
       threatRing,
       marker,
+      hpBarPivot,
       hpBarBg,
       hpBarFill,
+      hpBarWidth: fillWidth,
       destinationMarker,
       isDestroyed: false,
       type: unit.type,
     };
   }
 
-  update(unit: Unit, isSelected: boolean, isControlled: boolean, target: Unit | null, simTime: number) {
+  update(unit: Unit, isSelected: boolean, isControlled: boolean, target: Unit | null, simTime: number, isHovered = false) {
     const vis = this.ensureVisual(unit);
 
     vis.root.position.x = unit.position.x;
@@ -264,6 +299,7 @@ export class UnitRenderer {
 
     const recentlyHit = unit.lastDamagedAt !== undefined && simTime - unit.lastDamagedAt < 1.2;
     vis.selectionRing.isVisible = isSelected && !unit.isDestroyed && !isControlled;
+    vis.hoverRing.isVisible = isHovered && !isSelected && !unit.isDestroyed && !isControlled;
     vis.threatRing.isVisible = recentlyHit && !unit.isDestroyed;
 
     const destination = unit.currentOrder.destination ?? unit.lastOrderDestination;
@@ -274,11 +310,13 @@ export class UnitRenderer {
     }
 
     const hpFrac = Math.max(0, Math.min(1, unit.health / unit.maxHealth));
+    // Scale the fill from its left-edge pivot. Scaling is uniform in the bar's
+    // local space so the fill always stays visually inside the background bg.
     vis.hpBarFill.scaling.x = hpFrac;
-    vis.hpBarFill.position.x = -((1 - hpFrac) * 1.35);
     vis.hpBarFill.material = hpFrac < 0.35 ? this.materials.hpLow : this.materials.hpFill;
-    vis.hpBarFill.isVisible = !unit.isDestroyed && hpFrac < 0.999;
-    vis.hpBarBg.isVisible = !unit.isDestroyed && hpFrac < 0.999;
+    const showBar = !unit.isDestroyed && hpFrac < 0.999;
+    vis.hpBarBg.isVisible = showBar;
+    vis.hpBarFill.isVisible = showBar && hpFrac > 0;
 
     this.updateAttackLine(vis, unit, target, isSelected);
 
@@ -291,6 +329,8 @@ export class UnitRenderer {
       vis.marker.isVisible = false;
       vis.root.rotation.z = unit.type === 'infantry' ? 0 : 0.18;
       vis.destinationMarker.isVisible = false;
+      vis.hpBarBg.isVisible = false;
+      vis.hpBarFill.isVisible = false;
       vis.attackLine?.dispose();
       vis.attackLine = undefined;
     }
