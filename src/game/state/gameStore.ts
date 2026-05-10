@@ -39,8 +39,15 @@ export interface GameStoreState {
   /** Multiplier for the simulation (0 when paused). */
   speedMultiplier: number;
 
+  /** All currently selected friendly units. Empty when nothing is selected. */
+  selectedUnitIds: string[];
+  /** Convenience: the unit treated as primary for single-target HUD/jump-in. */
   selectedUnitId: string | null;
+  /** Optional: unit currently under the cursor for hover highlight. */
+  hoveredUnitId: string | null;
   controlledUnitId: string | null;
+  /** Numeric control groups (1-9) -> selected unit ids. */
+  controlGroups: Record<number, string[]>;
 
   unitSummaries: UnitSummary[];
   eventLog: EventLogEntry[];
@@ -58,8 +65,20 @@ export interface GameStoreState {
   resume: () => void;
   togglePause: () => void;
   setSpeedLevel: (level: SpeedLevel) => void;
+  /** Replace selection with the provided list (or clear). */
+  setSelection: (ids: string[]) => void;
+  /** Backwards-compatible single-unit selection helper. */
   setSelectedUnitId: (id: string | null) => void;
+  /** Toggle a single unit in the current selection (Shift+click). */
+  toggleUnitInSelection: (id: string) => void;
+  /** Add a single unit to the selection if not already present. */
+  addUnitToSelection: (id: string) => void;
+  setHoveredUnitId: (id: string | null) => void;
   setControlledUnitId: (id: string | null) => void;
+  /** Assign the current selection to control group N (1-9). */
+  assignControlGroup: (group: number) => void;
+  /** Recall a control group; returns the ids selected. */
+  recallControlGroup: (group: number) => string[];
   setUnitSummaries: (s: UnitSummary[]) => void;
   setEventLog: (events: EventLogEntry[]) => void;
   setObjective: (o: ObjectiveZone) => void;
@@ -75,8 +94,11 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   speedLevel: 'normal',
   speedMultiplier: SPEED_LEVELS.normal,
 
+  selectedUnitIds: [],
   selectedUnitId: null,
+  hoveredUnitId: null,
   controlledUnitId: null,
+  controlGroups: {},
 
   unitSummaries: [],
   eventLog: [],
@@ -92,7 +114,10 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       paused: false,
       result: null,
       controlledUnitId: null,
+      selectedUnitIds: [],
       selectedUnitId: null,
+      hoveredUnitId: null,
+      controlGroups: {},
       speedLevel: 'normal',
       speedMultiplier: SPEED_LEVELS.normal,
       eventLog: [],
@@ -103,7 +128,10 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
       screen: 'menu',
       paused: false,
       result: null,
+      selectedUnitIds: [],
       selectedUnitId: null,
+      hoveredUnitId: null,
+      controlGroups: {},
       controlledUnitId: null,
     }),
 
@@ -131,9 +159,79 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     set({ speedLevel: level, speedMultiplier: paused ? 0 : SPEED_LEVELS[level] });
   },
 
-  setSelectedUnitId: (id) => set({ selectedUnitId: id }),
+  setSelection: (ids) => {
+    const unique: string[] = [];
+    for (const id of ids) {
+      if (!unique.includes(id)) unique.push(id);
+    }
+    set({ selectedUnitIds: unique, selectedUnitId: unique[0] ?? null });
+  },
+
+  setSelectedUnitId: (id) => {
+    if (id === null) set({ selectedUnitIds: [], selectedUnitId: null });
+    else set({ selectedUnitIds: [id], selectedUnitId: id });
+  },
+
+  toggleUnitInSelection: (id) => {
+    const current = get().selectedUnitIds;
+    if (current.includes(id)) {
+      const next = current.filter((x) => x !== id);
+      set({ selectedUnitIds: next, selectedUnitId: next[0] ?? null });
+    } else {
+      const next = [...current, id];
+      // Promote the just-clicked unit to "primary" so HUD reacts to the latest click.
+      set({ selectedUnitIds: next, selectedUnitId: id });
+    }
+  },
+
+  addUnitToSelection: (id) => {
+    const current = get().selectedUnitIds;
+    if (current.includes(id)) {
+      set({ selectedUnitId: id });
+      return;
+    }
+    const next = [...current, id];
+    set({ selectedUnitIds: next, selectedUnitId: id });
+  },
+
+  setHoveredUnitId: (id) => set({ hoveredUnitId: id }),
   setControlledUnitId: (id) => set({ controlledUnitId: id }),
-  setUnitSummaries: (s) => set({ unitSummaries: s }),
+
+  assignControlGroup: (group) => {
+    const ids = [...get().selectedUnitIds];
+    if (!ids.length) return;
+    set({ controlGroups: { ...get().controlGroups, [group]: ids } });
+  },
+
+  recallControlGroup: (group) => {
+    const ids = get().controlGroups[group];
+    if (!ids || !ids.length) return [];
+    // Filter out destroyed/missing units against the latest summaries.
+    const summaries = get().unitSummaries;
+    const stillAlive = ids.filter((id) => {
+      const s = summaries.find((u) => u.id === id);
+      return s && !s.isDestroyed;
+    });
+    if (!stillAlive.length) return [];
+    set({ selectedUnitIds: stillAlive, selectedUnitId: stillAlive[0] });
+    return stillAlive;
+  },
+
+  setUnitSummaries: (s) => {
+    // Prune selection of any units that no longer exist or are destroyed.
+    const live = new Set(s.filter((u) => !u.isDestroyed).map((u) => u.id));
+    const prevIds = get().selectedUnitIds;
+    const filtered = prevIds.filter((id) => live.has(id));
+    if (filtered.length !== prevIds.length) {
+      set({
+        unitSummaries: s,
+        selectedUnitIds: filtered,
+        selectedUnitId: filtered[0] ?? null,
+      });
+    } else {
+      set({ unitSummaries: s });
+    }
+  },
   setEventLog: (events) => set({ eventLog: events }),
   setObjective: (o) => set({ objective: o }),
 

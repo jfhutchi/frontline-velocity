@@ -16,7 +16,7 @@ export const ObjectivePanel: React.FC = () => {
   else if (objective.occupiedByFriendly) status = `Holding zone (${objective.heldSeconds.toFixed(0)} / ${objective.requiredHoldSeconds}s)`;
 
   return (
-    <div className="objective-panel">
+    <div className="objective-panel game-ui-panel" data-ui-interactive="true">
       <h4>Objective: {objective.name}</h4>
       <div style={{ fontSize: 12 }}>{status}</div>
       <div className="progress-bar">

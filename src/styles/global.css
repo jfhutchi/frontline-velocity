@@ -359,6 +359,13 @@ button.danger {
   color: var(--fg-0);
   white-space: nowrap;
 }
+.controls-help-footnote {
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--fg-1);
+  opacity: 0.7;
+  font-style: italic;
+}
 
 .unit-roster {
   position: absolute;
@@ -367,37 +374,120 @@ button.danger {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  width: 220px;
 }
-.unit-roster button {
-  text-align: left;
-  font-size: 11px;
-  padding: 4px 8px;
-  width: 200px;
+.unit-roster .roster-group-header {
   font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--accent-warm);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  background: rgba(8, 16, 12, 0.62);
+  border: 1px solid var(--panel-border);
+  border-radius: 2px;
+}
+.unit-roster .unit-row {
+  /* Vertical layout so the name row and the health bar live in their own
+     dedicated rows — the colored fill can never bleed under the text. */
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  width: 100%;
+  padding: 5px 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-align: left;
   text-transform: none;
   letter-spacing: normal;
   background: rgba(8, 16, 12, 0.65);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  border: 1px solid var(--panel-border);
+  border-radius: 2px;
 }
-.unit-roster button.selected {
+.unit-roster .unit-row.primary {
   border-color: var(--accent);
   background: rgba(40, 80, 50, 0.75);
 }
-.unit-roster button.controlled {
+.unit-roster .unit-row.selected {
+  border-color: rgba(106, 191, 105, 0.7);
+  background: rgba(28, 60, 38, 0.7);
+}
+.unit-roster .unit-row.controlled {
   border-color: var(--accent-warm);
 }
-.unit-roster button.dead {
+.unit-roster .unit-row.dead {
   opacity: 0.45;
+}
+.unit-roster .unit-row.dead .unit-row-name {
   text-decoration: line-through;
 }
-.unit-roster .roster-hp {
+.unit-roster .unit-row-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.unit-roster .unit-row-name {
+  flex: 1 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--fg-0);
+}
+.unit-roster .unit-row-hp {
+  flex: 0 0 auto;
   color: var(--accent);
   font-size: 10px;
+  font-variant-numeric: tabular-nums;
 }
-.unit-roster .roster-hp.low {
+.unit-roster .unit-row-hp.low {
   color: var(--danger);
+}
+.unit-roster .unit-row-hpbar {
+  /* The bar background and the colored fill share this fixed-height container.
+     overflow:hidden clips the fill, so it can never escape the dark plate. */
+  position: relative;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(0, 0, 0, 0.85);
+  border-radius: 1px;
+  overflow: hidden;
+}
+.unit-roster .unit-row-hpfill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  background: linear-gradient(90deg, #6abf69 0%, #9fd97f 100%);
+  transition: width 150ms linear;
+}
+.unit-roster .unit-row-hpfill.low {
+  background: linear-gradient(90deg, #d35858 0%, #f1a48a 100%);
+}
+
+.unit-panel .multi-selection-tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--accent-warm);
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+  padding: 2px 6px;
+  border: 1px solid rgba(216, 166, 74, 0.45);
+  border-radius: 2px;
+  background: rgba(40, 30, 10, 0.45);
+}
+
+/* Live drag-rectangle drawn over the canvas while the player box-selects. */
+.selection-box-overlay {
+  position: absolute;
+  pointer-events: none;
+  border: 1px solid rgba(160, 230, 160, 0.85);
+  background: rgba(106, 191, 105, 0.18);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45) inset;
+  z-index: 70;
 }
 
 .event-log {
@@ -715,8 +805,9 @@ button.danger {
   }
   .unit-roster {
     top: 70px;
+    width: 168px;
   }
-  .unit-roster button {
-    width: 160px;
+  .unit-roster .unit-row {
+    padding: 4px 6px;
   }
 }

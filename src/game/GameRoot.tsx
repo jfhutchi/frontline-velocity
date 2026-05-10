@@ -8,11 +8,15 @@ import { useGameStore } from './state/gameStore';
 import { isTouchDevice } from './input/TouchControls';
 import { MobileTouchControls } from '../ui/MobileTouchControls';
 import { AudioManager } from './audio/AudioManager';
+import type { SelectionBoxRect } from './input/TacticalInputController';
+
+const DOUBLE_TAP_MS = 320;
 
 export const GameRoot: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const engineRef = useRef<GameEngine | null>(null);
   const [ready, setReady] = useState(false);
+  const [selectionBox, setSelectionBox] = useState<SelectionBoxRect | null>(null);
 
   const screen = useGameStore((s) => s.screen);
   const paused = useGameStore((s) => s.paused);
@@ -22,7 +26,9 @@ export const GameRoot: React.FC = () => {
   useEffect(() => {
     if (!canvasRef.current) return;
     AudioManager.ensure();
-    const engine = new GameEngine(canvasRef.current);
+    const engine = new GameEngine(canvasRef.current, {
+      onSelectionBoxChange: setSelectionBox,
+    });
     engineRef.current = engine;
     setReady(true);
     return () => {
@@ -54,30 +60,39 @@ export const GameRoot: React.FC = () => {
   }, [damageFlashTick]);
 
   useEffect(() => {
+    const lastDigitTap: Record<number, number> = {};
+
     const onKeyDown = (ev: KeyboardEvent) => {
       const store = useGameStore.getState();
       const k = ev.key.toLowerCase();
       const engine = engineRef.current;
       if (!engine) return;
+
+      // Avoid stealing keys when an actual input/textarea has focus.
+      const target = ev.target as Element | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+
       if (k === ' ' && !ev.repeat && (store.screen === 'tactical' || store.screen === 'directControl' || store.screen === 'paused')) {
-        // Space: in direct control acts as fire (handled by DirectControlInput);
-        // in tactical, toggle pause.
         if (store.screen === 'tactical' || store.screen === 'paused') {
           ev.preventDefault();
           store.togglePause();
         }
         return;
       }
+
       if (k === 'escape') {
         if (store.screen === 'directControl') {
-          // Escape returns to tactical.
           engine.exitDirectControl();
           ev.preventDefault();
           return;
         }
         if (store.screen === 'tactical') {
           ev.preventDefault();
-          store.pause();
+          if (store.selectedUnitIds.length > 0) {
+            store.setSelection([]);
+          } else {
+            store.pause();
+          }
           return;
         }
         if (store.screen === 'paused') {
@@ -86,27 +101,71 @@ export const GameRoot: React.FC = () => {
           return;
         }
       }
+
       if (k === 'r' && store.screen === 'directControl') {
         engine.exitDirectControl();
         ev.preventDefault();
         return;
       }
-      if ((k === 'enter' || k === 'f') && store.screen === 'tactical') {
+
+      if (k === 'enter' && store.screen === 'tactical') {
         engine.jumpIntoSelected();
         ev.preventDefault();
         return;
       }
+
+      if (k === 'f' && store.screen === 'tactical') {
+        const ids = store.selectedUnitIds;
+        if (ids.length) {
+          engine.centerCameraOnSelected();
+        }
+        ev.preventDefault();
+        return;
+      }
+
       if (k === 'tab' && store.screen === 'tactical') {
         ev.preventDefault();
         cycleSelection();
         return;
       }
-      if (['1', '2', '3', '4'].includes(k) && store.screen === 'tactical') {
+
+      // Control groups (1-9). Ctrl-digit assigns; bare digit recalls/selects.
+      if (/^[1-9]$/.test(k) && store.screen === 'tactical') {
+        const n = parseInt(k, 10);
+        if (ev.ctrlKey || ev.metaKey) {
+          ev.preventDefault();
+          if (store.selectedUnitIds.length > 0) {
+            store.assignControlGroup(n);
+            AudioManager.play('click');
+          }
+          return;
+        }
+        ev.preventDefault();
+        const group = store.controlGroups[n];
+        if (group && group.length > 0) {
+          const recalled = store.recallControlGroup(n);
+          if (recalled.length > 0) {
+            AudioManager.play('click');
+            const now = performance.now();
+            if (lastDigitTap[n] && now - lastDigitTap[n] < DOUBLE_TAP_MS) {
+              engine.centerCameraOnUnits(recalled);
+            }
+            lastDigitTap[n] = now;
+          }
+          return;
+        }
+        // Fall back to roster-slot selection (preserves v0.0.2 behavior for 1-4).
         const friendlies = store.unitSummaries.filter((u) => u.faction === 'friendly');
-        const idx = parseInt(k, 10) - 1;
-        if (friendlies[idx]) {
-          store.setSelectedUnitId(friendlies[idx].id);
+        const idx = n - 1;
+        const target = friendlies[idx];
+        if (target && !target.isDestroyed) {
+          store.setSelectedUnitId(target.id);
           AudioManager.play('click');
+          const now = performance.now();
+          if (lastDigitTap[n] && now - lastDigitTap[n] < DOUBLE_TAP_MS) {
+            engine.centerCameraOnSelected();
+          }
+          lastDigitTap[n] = now;
         }
       }
     };
@@ -141,6 +200,17 @@ export const GameRoot: React.FC = () => {
           />
         )}
       </div>
+      {selectionBox && (screen === 'tactical' || screen === 'paused') && (
+        <div
+          className="selection-box-overlay"
+          style={{
+            left: selectionBox.x,
+            top: selectionBox.y,
+            width: selectionBox.width,
+            height: selectionBox.height,
+          }}
+        />
+      )}
     </div>
   );
 };

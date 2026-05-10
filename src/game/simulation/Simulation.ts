@@ -117,7 +117,37 @@ export class Simulation {
     };
     u.currentOrder = order;
     u.lastOrderDestination = { ...destination, y: 0 };
+    // Drop any existing attack-target so the new move/attack-move overrides it.
+    u.targetId = null;
     pushBattlefieldEvent(this.state, `move_${u.id}`, `${u.name} moving`, 1.2);
+  }
+
+  /**
+   * Player-issued attack order. The selected unit prioritizes the chosen target
+   * and moves into range if necessary. Returns true if the order was accepted.
+   */
+  issueAttackOrder(unitId: string, targetId: string): boolean {
+    const u = this.state.units.get(unitId);
+    const target = this.state.units.get(targetId);
+    if (!u || u.isDestroyed || !u.isPlayerControllable) return false;
+    if (!target || target.isDestroyed || target.faction === u.faction) return false;
+    u.targetId = targetId;
+    u.targetLockedUntil = this.state.time + 6;
+    if (u.speed === 0) {
+      u.currentOrder = { kind: 'attack', targetUnitId: targetId };
+    } else {
+      const path = planPath(this.state, u.position, target.position, u.radius);
+      u.currentOrder = {
+        kind: 'attack',
+        targetUnitId: targetId,
+        destination: { ...target.position },
+        path,
+        pathIndex: 0,
+      };
+      u.lastOrderDestination = { ...target.position };
+    }
+    pushBattlefieldEvent(this.state, `pAttack_${u.id}`, `${u.name} attacking ${target.name}`, 1.5);
+    return true;
   }
 
   /** Direct-control: spawn a projectile from the controlled unit immediately. */

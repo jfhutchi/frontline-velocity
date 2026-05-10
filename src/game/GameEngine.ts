@@ -1,7 +1,19 @@
 import { AudioManager } from './audio/AudioManager';
-import { DC_FORWARD_ACCEL, DC_MAX_FORWARD_SPEED, DC_MAX_REVERSE_SPEED, DC_REVERSE_ACCEL, DC_TURN_RATE, MAP_HALF, SPEED_LEVELS, VEHICLE_FRICTION } from './constants';
+import {
+  DC_FORWARD_ACCEL,
+  DC_MAX_FORWARD_SPEED,
+  DC_MAX_REVERSE_SPEED,
+  DC_REVERSE_ACCEL,
+  DC_TURN_RATE,
+  MAP_HALF,
+  SPEED_LEVELS,
+  VEHICLE_FRICTION,
+} from './constants';
+import { CommandController } from './input/CommandController';
 import { DirectControlInput } from './input/DirectControlInput';
-import { TacticalInput } from './input/TacticalInput';
+import { PointerWorldResolver } from './input/PointerWorldResolver';
+import { SelectionController } from './input/SelectionController';
+import { TacticalInputController, type SelectionBoxRect } from './input/TacticalInputController';
 import { CameraController } from './rendering/CameraController';
 import { createBabylonContext, disposeBabylonContext, type BabylonContext } from './rendering/BabylonScene';
 import { EffectsRenderer } from './rendering/EffectsRenderer';
@@ -19,6 +31,11 @@ declare global {
   }
 }
 
+export interface GameEngineCallbacks {
+  /** Called when the drag-rectangle changes so React can render the overlay. */
+  onSelectionBoxChange?: (rect: SelectionBoxRect | null) => void;
+}
+
 export class GameEngine {
   private ctx: BabylonContext;
   private terrainRenderer: TerrainRenderer;
@@ -26,9 +43,13 @@ export class GameEngine {
   private effectsRenderer: EffectsRenderer;
   private cameraController: CameraController;
   private simulation: Simulation;
-  private tacticalInput: TacticalInput;
+  private resolver: PointerWorldResolver;
+  private selection: SelectionController;
+  private commandController: CommandController;
+  private tacticalInput: TacticalInputController;
   private directInput: DirectControlInput;
   private canvas: HTMLCanvasElement;
+  private callbacks: GameEngineCallbacks;
 
   private lastFrameTime = 0;
   private resultEmitted = false;
@@ -39,8 +60,9 @@ export class GameEngine {
   private lastEffectCount = 0;
   private resizeObserver: ResizeObserver | null = null;
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, callbacks: GameEngineCallbacks = {}) {
     this.canvas = canvas;
+    this.callbacks = callbacks;
     this.ctx = createBabylonContext(canvas);
     this.simulation = new Simulation({
       onPlayerHit: () => useGameStore.getState().flashDamage(),
@@ -49,17 +71,28 @@ export class GameEngine {
     this.unitRenderer = new UnitRenderer(this.ctx.scene, this.ctx.shadowGenerator);
     this.effectsRenderer = new EffectsRenderer(this.ctx.scene);
     this.cameraController = new CameraController(this.ctx.scene, this.ctx.camera, canvas);
-    this.tacticalInput = new TacticalInput(this.ctx.scene, this.ctx.camera, canvas, this.simulation.state, {
-      onSelectUnit: (id) => {
-        useGameStore.getState().setSelectedUnitId(id);
-        if (id) AudioManager.play('click');
+    this.resolver = new PointerWorldResolver(this.ctx.scene, this.ctx.camera, canvas, this.simulation.state);
+    this.selection = new SelectionController(this.simulation.state);
+    this.commandController = new CommandController(this.simulation);
+    this.tacticalInput = new TacticalInputController(
+      this.ctx.scene,
+      canvas,
+      this.simulation.state,
+      this.cameraController.getTactical(),
+      this.resolver,
+      this.selection,
+      this.commandController,
+      {
+        onSelectionBoxChange: (rect) => this.callbacks.onSelectionBoxChange?.(rect),
+        onHoverUnitChange: (id) => useGameStore.getState().setHoveredUnitId(id),
+        onEvent: (kind, detail) => this.appendInputEventLog(kind, detail),
+        onSfx: (kind) => {
+          if (kind === 'click') AudioManager.play('click');
+          else if (kind === 'order') AudioManager.play('click');
+          else if (kind === 'attack') AudioManager.play('hit');
+        },
       },
-      onIssueMoveOrder: (id, dest) => {
-        this.simulation.issueMoveOrder(id, dest);
-        AudioManager.play('click');
-      },
-      getSelectedUnitId: () => useGameStore.getState().selectedUnitId,
-    });
+    );
     this.directInput = new DirectControlInput();
 
     this.terrainRenderer.build(this.simulation.state.mission);
@@ -95,6 +128,7 @@ export class GameEngine {
   resetMission() {
     this.simulation.reset();
     this.tacticalInput.setSimulationState(this.simulation.state);
+    this.commandController.setSimulation(this.simulation);
     this.terrainRenderer.build(this.simulation.state.mission);
     this.unitRenderer.dispose();
     this.effectsRenderer.dispose();
@@ -145,6 +179,9 @@ export class GameEngine {
       this.simulation.update(rawDt, speed, controlledId);
     }
     this.tacticalInput.setSimulationState(this.simulation.state);
+    if (this.cameraController.getMode() === 'tactical') {
+      this.tacticalInput.tick();
+    }
     this.cameraController.update(rawDt);
 
     // Render syncing.
@@ -257,19 +294,36 @@ export class GameEngine {
   private syncRenderers() {
     const state = this.simulation.state;
     const store = useGameStore.getState();
+    const selectedSet = new Set(store.selectedUnitIds);
+    const hoveredId = store.hoveredUnitId;
 
     const activeIds = new Set<string>();
     for (const u of state.units.values()) {
       activeIds.add(u.id);
-      const isSelected = store.selectedUnitId === u.id;
+      const isSelected = selectedSet.has(u.id);
       const isControlled = store.controlledUnitId === u.id;
+      const isHovered = hoveredId === u.id && !isSelected;
       const target = u.targetId ? state.units.get(u.targetId) ?? null : null;
-      this.unitRenderer.update(u, isSelected, isControlled, target, state.time);
+      this.unitRenderer.update(u, isSelected, isControlled, target, state.time, isHovered);
     }
     this.unitRenderer.removeMissing(activeIds);
 
     this.effectsRenderer.update(state);
     this.terrainRenderer.updateObjective(state.objective);
+  }
+
+  private appendInputEventLog(
+    kind: 'select' | 'box' | 'move' | 'attack' | 'noop',
+    detail?: string,
+  ) {
+    if (kind === 'noop') return;
+    const message = detail ?? defaultInputEventLabel(kind);
+    if (!message) return;
+    const state = this.simulation.state;
+    state.eventLog.push({ id: `input_${kind}_${state.time.toFixed(2)}`, time: state.time, message });
+    if (state.eventLog.length > 6) {
+      state.eventLog.splice(0, state.eventLog.length - 6);
+    }
   }
 
   private publishSummaries(force: boolean) {
@@ -333,13 +387,38 @@ export class GameEngine {
     this.directInput.setTouch(forward, turn, fire);
   }
 
-  /** Used by HUD buttons. */
+  /** Used by HUD buttons — centers on the primary selected unit. */
   centerCameraOnSelected() {
-    const id = useGameStore.getState().selectedUnitId;
-    if (!id) return;
-    const u = this.simulation.state.units.get(id);
-    if (!u) return;
-    this.cameraController.centerOn(u.position.x, u.position.z);
+    const ids = useGameStore.getState().selectedUnitIds;
+    if (!ids.length) return;
+    let cx = 0;
+    let cz = 0;
+    let count = 0;
+    for (const id of ids) {
+      const u = this.simulation.state.units.get(id);
+      if (!u) continue;
+      cx += u.position.x;
+      cz += u.position.z;
+      count += 1;
+    }
+    if (!count) return;
+    this.cameraController.centerOn(cx / count, cz / count);
+  }
+
+  /** Center camera on a control group's average position; used for double-tap. */
+  centerCameraOnUnits(ids: string[]) {
+    let cx = 0;
+    let cz = 0;
+    let count = 0;
+    for (const id of ids) {
+      const u = this.simulation.state.units.get(id);
+      if (!u || u.isDestroyed) continue;
+      cx += u.position.x;
+      cz += u.position.z;
+      count += 1;
+    }
+    if (!count) return;
+    this.cameraController.centerOn(cx / count, cz / count);
   }
 
   resetTacticalCamera() {
@@ -384,6 +463,7 @@ export class GameEngine {
       note: 'World coordinates use x east/west and z north/south on the ground plane.',
       screen: store.screen,
       selectedUnitId: store.selectedUnitId,
+      selectedUnitIds: store.selectedUnitIds,
       controlledUnitId: store.controlledUnitId,
       objective: {
         heldSeconds: Number(state.objective.heldSeconds.toFixed(1)),
@@ -404,6 +484,19 @@ export class GameEngine {
     this.publishSummaries(true);
     this.ctx.scene.render();
   };
+}
+
+function defaultInputEventLabel(kind: 'select' | 'box' | 'move' | 'attack'): string {
+  switch (kind) {
+    case 'select':
+      return 'Unit selected';
+    case 'box':
+      return 'Units selected';
+    case 'move':
+      return 'Move order issued';
+    case 'attack':
+      return 'Attack order issued';
+  }
 }
 
 function toSummary(u: Unit, time: number, units: Map<string, Unit>): UnitSummary {
