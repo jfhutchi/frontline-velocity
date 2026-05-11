@@ -14,6 +14,11 @@ export function updateAI(state: SimulationState, controlledUnitId: string | null
       continue;
     }
 
+    // Units claimed by an external controller (e.g. the squad GOAP brain)
+    // own their own targetId / currentOrder; the per-unit AI must not fight
+    // those decisions or it will thrash between the two systems.
+    if (unit.aiManagedExternally) continue;
+
     validateTarget(state, unit);
     if (state.time >= unit.aiNextThinkAt || !unit.targetId) {
       const previousTarget = unit.targetId;

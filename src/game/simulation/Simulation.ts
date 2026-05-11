@@ -1,6 +1,7 @@
 import { MAX_FRAME_DT, SIM_DT } from '../constants';
 import { createOperationCrossroads } from '../missions/operationCrossroads';
 import type { Order, Projectile, SimulationState, Unit, Vec3 } from '../types';
+import { CoverProvider, EnemyCommanderAI, EnemySquadGOAPBrain, type SquadDebugSnapshot } from './ai';
 import { updateAI } from './systems/AISystem';
 import { updateCombat } from './systems/CombatSystem';
 import { applyDamage } from './systems/DamageSystem';
@@ -22,18 +23,67 @@ export type SimulationCallbacks = {
 export class Simulation {
   state: SimulationState;
   callbacks: SimulationCallbacks;
+  /** Enemy commander / squad GOAP layer. Friendly AI is unchanged. */
+  enemyCommander: EnemyCommanderAI;
+  private cover = new CoverProvider();
   private accumulator = 0;
   private freshProjectiles: Projectile[] = [];
   private damageEvents: DamageEvent[] = [];
 
   constructor(callbacks: SimulationCallbacks) {
     this.callbacks = callbacks;
+    this.enemyCommander = new EnemyCommanderAI();
     this.state = this.buildInitialState();
+    this.buildEnemyTactics();
   }
 
   reset() {
+    this.enemyCommander.detachAll(this.state);
+    this.enemyCommander.unregisterAll();
     this.state = this.buildInitialState();
     this.accumulator = 0;
+    this.buildEnemyTactics();
+  }
+
+  /**
+   * Returns the latest debug snapshot for each enemy squad. Used by the
+   * EnemyTacticsDebug overlay and by the scenario tests.
+   */
+  getEnemyDebugSnapshots(): SquadDebugSnapshot[] {
+    const out: SquadDebugSnapshot[] = [];
+    for (const squad of this.enemyCommander.getSquads()) {
+      const snap = squad.getDebugSnapshot();
+      if (snap) out.push(snap);
+    }
+    return out;
+  }
+
+  private buildEnemyTactics() {
+    this.cover.buildFromMission(this.state);
+    const enemyUnits = [...this.state.units.values()].filter((u) => u.faction === 'enemy');
+    if (!enemyUnits.length) return;
+    // Synthetic supply depot placed off the south map edge — far enough from
+    // combat that ResupplyAtDepot requires a real trip, but near enemy spawn
+    // so it's defensible. The commander will only consult it when supplied.
+    const supplyPoint: Vec3 = { x: 0, y: 0, z: -90 };
+    // Average enemy starting position is a sensible fallback rally point.
+    const cx = enemyUnits.reduce((s, u) => s + u.position.x, 0) / enemyUnits.length;
+    const cz = enemyUnits.reduce((s, u) => s + u.position.z, 0) / enemyUnits.length;
+    const fallbackPoint: Vec3 = { x: cx, y: 0, z: cz - 14 };
+    const brain = new EnemySquadGOAPBrain(
+      {
+        squadId: 'enemy-alpha',
+        unitIds: enemyUnits.map((u) => u.id),
+        objectiveId: this.state.objective.id,
+        fallbackPoint,
+        supplyPoint,
+        ammoMax: 80,
+        startingMorale: 85,
+      },
+      this.cover,
+    );
+    this.enemyCommander.registerSquad(brain);
+    this.enemyCommander.attachAll(this.state);
   }
 
   private buildInitialState(): SimulationState {
@@ -86,6 +136,11 @@ export class Simulation {
   private step(dt: number, controlledUnitId: string | null) {
     this.state.time += dt;
 
+    // Enemy squad GOAP runs first; it writes unit.targetId / unit.currentOrder
+    // for managed enemies before the per-unit AI loop runs. The friendly AI
+    // path is unchanged because the old AISystem skips units flagged
+    // aiManagedExternally.
+    this.enemyCommander.update(this.state, dt);
     updateAI(this.state, controlledUnitId);
     updateMovement(this.state, dt, controlledUnitId);
 
@@ -119,7 +174,8 @@ export class Simulation {
     u.lastOrderDestination = { ...destination, y: 0 };
     // Drop any existing attack-target so the new move/attack-move overrides it.
     u.targetId = null;
-    pushBattlefieldEvent(this.state, `move_${u.id}`, `${u.name} moving`, 1.2);
+    // Player-facing move line comes from TacticalInputController to avoid log spam
+    // when several units receive formation orders at once.
   }
 
   /**
@@ -146,7 +202,6 @@ export class Simulation {
       };
       u.lastOrderDestination = { ...target.position };
     }
-    pushBattlefieldEvent(this.state, `pAttack_${u.id}`, `${u.name} attacking ${target.name}`, 1.5);
     return true;
   }
 

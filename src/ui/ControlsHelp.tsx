@@ -25,7 +25,7 @@ export const ControlsHelp: React.FC<Props> = ({ mode }) => {
             </tr>
             <tr>
               <td className="key">R-Click ground</td>
-              <td>Move / attack-move</td>
+              <td>Attack-move (move + auto-engage)</td>
             </tr>
             <tr>
               <td className="key">R-Click enemy</td>
@@ -33,15 +33,19 @@ export const ControlsHelp: React.FC<Props> = ({ mode }) => {
             </tr>
             <tr>
               <td className="key">Mouse edges</td>
-              <td>Pan camera</td>
+              <td>Pan camera (canvas edges)</td>
             </tr>
             <tr>
               <td className="key">M-Drag</td>
               <td>Pan camera</td>
             </tr>
             <tr>
+              <td className="key">Alt + M-Drag</td>
+              <td>Rotate camera (orbit)</td>
+            </tr>
+            <tr>
               <td className="key">Wheel</td>
-              <td>Zoom</td>
+              <td>Zoom (toward cursor on ground)</td>
             </tr>
             <tr>
               <td className="key">WASD / Arrows</td>
@@ -65,7 +69,7 @@ export const ControlsHelp: React.FC<Props> = ({ mode }) => {
             </tr>
             <tr>
               <td className="key">1-9</td>
-              <td>Select roster / recall group</td>
+              <td>Recall group, or roster slot if empty; double-tap centers camera</td>
             </tr>
             <tr>
               <td className="key">Ctrl + 1-9</td>
@@ -73,7 +77,7 @@ export const ControlsHelp: React.FC<Props> = ({ mode }) => {
             </tr>
             <tr>
               <td className="key">Tab</td>
-              <td>Cycle selection</td>
+              <td>Rotate primary in group, or cycle friendlies</td>
             </tr>
             <tr>
               <td className="key">Enter</td>
@@ -90,7 +94,7 @@ export const ControlsHelp: React.FC<Props> = ({ mode }) => {
           </tbody>
         </table>
         <div className="controls-help-footnote">
-          Mobile controls are not optimized in v0.0.3.
+          Mobile: touch still works but is not optimized this version. Double-click &ldquo;select all same type&rdquo; is future work.
         </div>
       </div>
     );
@@ -118,8 +122,12 @@ export const ControlsHelp: React.FC<Props> = ({ mode }) => {
               <td>Fire (backup)</td>
             </tr>
             <tr>
-              <td className="key">R / Esc</td>
-              <td>Return to command</td>
+              <td className="key">R</td>
+              <td>Return to tactical command</td>
+            </tr>
+            <tr>
+              <td className="key">Esc</td>
+              <td>Pause (Esc again to resume)</td>
             </tr>
           </tbody>
         </table>

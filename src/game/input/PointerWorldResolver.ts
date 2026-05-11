@@ -38,6 +38,16 @@ export class PointerWorldResolver {
     return { x: pick.pickedPoint.x, y: 0, z: pick.pickedPoint.z };
   }
 
+  /** True if the ground point under the cursor lies inside the mission objective zone. */
+  isClickInObjectiveZone(clientX: number, clientY: number): boolean {
+    const g = this.groundPointAt(clientX, clientY);
+    if (!g) return false;
+    const o = this.state.objective;
+    const dx = g.x - o.position.x;
+    const dz = g.z - o.position.z;
+    return dx * dx + dz * dz <= o.radius * o.radius;
+  }
+
   /** Picks any unit (friend or foe) under the cursor, identified by the hull/marker mesh prefix. */
   unitAt(clientX: number, clientY: number): Unit | null {
     const { x, y } = this.toCanvasXY(clientX, clientY);

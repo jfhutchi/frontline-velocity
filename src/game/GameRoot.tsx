@@ -72,18 +72,22 @@ export const GameRoot: React.FC = () => {
       const target = ev.target as Element | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
 
-      if (k === ' ' && !ev.repeat && (store.screen === 'tactical' || store.screen === 'directControl' || store.screen === 'paused')) {
-        if (store.screen === 'tactical' || store.screen === 'paused') {
-          ev.preventDefault();
-          store.togglePause();
-        }
+      // Space: pause only in tactical (direct-control uses Space to fire).
+      if (k === ' ' && !ev.repeat && (store.screen === 'tactical' || store.screen === 'paused')) {
+        ev.preventDefault();
+        store.togglePause();
         return;
       }
 
       if (k === 'escape') {
-        if (store.screen === 'directControl') {
-          engine.exitDirectControl();
+        if (store.paused) {
           ev.preventDefault();
+          store.resume();
+          return;
+        }
+        if (store.screen === 'directControl') {
+          ev.preventDefault();
+          store.pause();
           return;
         }
         if (store.screen === 'tactical') {
@@ -93,11 +97,6 @@ export const GameRoot: React.FC = () => {
           } else {
             store.pause();
           }
-          return;
-        }
-        if (store.screen === 'paused') {
-          ev.preventDefault();
-          store.resume();
           return;
         }
       }
@@ -125,7 +124,12 @@ export const GameRoot: React.FC = () => {
 
       if (k === 'tab' && store.screen === 'tactical') {
         ev.preventDefault();
-        cycleSelection();
+        if (store.selectedUnitIds.length > 1) {
+          store.rotatePrimarySelection();
+          AudioManager.play('click');
+        } else {
+          cycleSelection();
+        }
         return;
       }
 
@@ -190,7 +194,7 @@ export const GameRoot: React.FC = () => {
       <div className="hud-layer">
         {ready && (screen === 'tactical' || screen === 'paused') && <TacticalHUD engine={engineRef.current} />}
         {ready && screen === 'directControl' && <DirectControlHUD engine={engineRef.current} />}
-        {paused && screen === 'paused' && <PauseMenu />}
+        {paused && (screen === 'tactical' || screen === 'directControl') && <PauseMenu />}
         {ready && (screen === 'tactical' || screen === 'directControl') && <ControlsHelp mode={screen} />}
         {ready && screen === 'directControl' && isTouchDevice() && (
           <MobileTouchControls

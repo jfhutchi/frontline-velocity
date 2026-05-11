@@ -9,6 +9,7 @@ import {
   ShadowGenerator,
   Vector3,
 } from '@babylonjs/core';
+import { TACTICAL_CAMERA_MAX_BETA, TACTICAL_CAMERA_MIN_BETA, TACTICAL_CAMERA_MAX_RADIUS, TACTICAL_CAMERA_MIN_RADIUS } from '../constants';
 
 export interface BabylonContext {
   engine: Engine;
@@ -43,10 +44,10 @@ export function createBabylonContext(canvas: HTMLCanvasElement): BabylonContext 
     Vector3.Zero(),
     scene,
   );
-  camera.lowerBetaLimit = 0.22;
-  camera.upperBetaLimit = Math.PI * 0.48;
-  camera.lowerRadiusLimit = 26;
-  camera.upperRadiusLimit = 185;
+  camera.lowerBetaLimit = TACTICAL_CAMERA_MIN_BETA;
+  camera.upperBetaLimit = TACTICAL_CAMERA_MAX_BETA;
+  camera.lowerRadiusLimit = TACTICAL_CAMERA_MIN_RADIUS;
+  camera.upperRadiusLimit = TACTICAL_CAMERA_MAX_RADIUS;
   camera.minZ = 0.5;
   camera.maxZ = 600;
   camera.wheelDeltaPercentage = 0.04;

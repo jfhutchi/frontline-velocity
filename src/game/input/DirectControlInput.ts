@@ -1,6 +1,8 @@
 // Tracks keyboard / mouse input for direct vehicle control mode.
 // The actual physics application happens inside the GameEngine.
 
+import { useGameStore } from '../state/gameStore';
+
 export interface DirectInputState {
   forward: number;
   turn: number; // -1 turn left, +1 turn right
@@ -70,6 +72,7 @@ export class DirectControlInput {
   }
 
   private onKeyDown = (ev: KeyboardEvent) => {
+    if (useGameStore.getState().paused) return;
     const k = ev.key.toLowerCase();
     this.keys.add(k);
     if (k === ' ') ev.preventDefault();
@@ -77,8 +80,13 @@ export class DirectControlInput {
   private onKeyUp = (ev: KeyboardEvent) => {
     this.keys.delete(ev.key.toLowerCase());
   };
+  private isOverGameUi(target: EventTarget | null): boolean {
+    return target instanceof Element && Boolean(target.closest('button, [data-ui-interactive="true"], .game-ui-panel, .pause-overlay'));
+  }
+
   private onMouseDown = (ev: MouseEvent) => {
-    if (ev.button === 0) {
+    if (useGameStore.getState().paused) return;
+    if (ev.button === 0 && !this.isOverGameUi(ev.target)) {
       this.fireDown = true;
       this.fireQueued = true;
     }
@@ -87,8 +95,8 @@ export class DirectControlInput {
     if (ev.button === 0) this.fireDown = false;
   };
   private onClick = (ev: MouseEvent) => {
-    if (ev.button !== 0) return;
-    if (ev.target instanceof HTMLElement && ev.target.closest('button')) return;
+    if (ev.button !== 0 || useGameStore.getState().paused) return;
+    if (this.isOverGameUi(ev.target)) return;
     this.fireQueued = true;
   };
   private onBlur = () => {

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { GameMode, ObjectiveZone } from '../types';
 import type { SpeedLevel } from '../constants';
 import { SPEED_LEVELS } from '../constants';
+import type { SquadDebugSnapshot } from '../simulation/ai';
 
 export interface UnitSummary {
   id: string;
@@ -57,6 +58,11 @@ export interface GameStoreState {
   /** Counter incremented when player takes damage to flash the screen. */
   damageFlashTick: number;
 
+  /** Optional enemy AI debug snapshot pushed by the simulation each tick. */
+  enemyDebug: SquadDebugSnapshot[];
+  /** Player toggle for the enemy AI debug overlay. */
+  showEnemyDebug: boolean;
+
   // ----- actions -----
   goToBriefing: () => void;
   startMission: () => void;
@@ -79,6 +85,8 @@ export interface GameStoreState {
   assignControlGroup: (group: number) => void;
   /** Recall a control group; returns the ids selected. */
   recallControlGroup: (group: number) => string[];
+  /** With multiple units selected, rotate which id is primary (first in list). */
+  rotatePrimarySelection: () => void;
   setUnitSummaries: (s: UnitSummary[]) => void;
   setEventLog: (events: EventLogEntry[]) => void;
   setObjective: (o: ObjectiveZone) => void;
@@ -86,6 +94,9 @@ export interface GameStoreState {
   exitDirectControl: () => void;
   setResult: (r: 'victory' | 'defeat') => void;
   flashDamage: () => void;
+  setEnemyDebug: (snaps: SquadDebugSnapshot[]) => void;
+  toggleEnemyDebug: () => void;
+  setShowEnemyDebug: (v: boolean) => void;
 }
 
 export const useGameStore = create<GameStoreState>((set, get) => ({
@@ -105,6 +116,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   objective: null,
   result: null,
   damageFlashTick: 0,
+  enemyDebug: [],
+  showEnemyDebug: false,
 
   goToBriefing: () => set({ screen: 'briefing' }),
 
@@ -217,6 +230,15 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     return stillAlive;
   },
 
+  rotatePrimarySelection: () => {
+    const ids = [...get().selectedUnitIds];
+    if (ids.length <= 1) return;
+    const first = ids.shift();
+    if (first === undefined) return;
+    ids.push(first);
+    set({ selectedUnitIds: ids, selectedUnitId: ids[0] });
+  },
+
   setUnitSummaries: (s) => {
     // Prune selection of any units that no longer exist or are destroyed.
     const live = new Set(s.filter((u) => !u.isDestroyed).map((u) => u.id));
@@ -252,4 +274,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   flashDamage: () => {
     set({ damageFlashTick: get().damageFlashTick + 1 });
   },
+
+  setEnemyDebug: (snaps) => set({ enemyDebug: snaps }),
+  toggleEnemyDebug: () => set({ showEnemyDebug: !get().showEnemyDebug }),
+  setShowEnemyDebug: (v) => set({ showEnemyDebug: v }),
 }));

@@ -3,6 +3,7 @@ import { useGameStore } from '../game/state/gameStore';
 import { AudioManager } from '../game/audio/AudioManager';
 import { ObjectivePanel } from './ObjectivePanel';
 import { UnitPanel } from './UnitPanel';
+import { EnemyTacticsDebug } from './EnemyTacticsDebug';
 import type { GameEngine } from '../game/GameEngine';
 
 interface Props {
@@ -23,6 +24,8 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
   const resume = useGameStore((s) => s.resume);
   const returnToMenu = useGameStore((s) => s.returnToMenu);
   const eventLog = useGameStore((s) => s.eventLog);
+  const showEnemyDebug = useGameStore((s) => s.showEnemyDebug);
+  const toggleEnemyDebug = useGameStore((s) => s.toggleEnemyDebug);
 
   const friendlies = summaries.filter((u) => u.faction === 'friendly');
   const selectedSet = new Set(selectedIds);
@@ -77,6 +80,16 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
             }}
           >
             Reset Camera
+          </button>
+          <button
+            className={showEnemyDebug ? 'primary' : ''}
+            onClick={() => {
+              AudioManager.play('click');
+              toggleEnemyDebug();
+            }}
+            title="Toggle enemy AI debug overlay ( ] )"
+          >
+            AI Debug
           </button>
           <button
             className="danger"

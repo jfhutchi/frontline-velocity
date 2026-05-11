@@ -7,7 +7,7 @@ export const PauseMenu: React.FC = () => {
   const returnToMenu = useGameStore((s) => s.returnToMenu);
 
   return (
-    <div className="pause-overlay">
+    <div className="pause-overlay game-ui-panel" data-ui-interactive="true">
       <h2>Paused</h2>
       <div className="menu-buttons">
         <button
