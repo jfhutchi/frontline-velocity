@@ -167,6 +167,7 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
       </div>
 
       <UnitPanel engine={engine} />
+      <EnemyTacticsDebug />
     </>
   );
 };
