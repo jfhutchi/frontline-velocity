@@ -3,7 +3,9 @@ import {
   MAP_HALF,
   TACTICAL_CAMERA_DEFAULT,
   TACTICAL_CAMERA_FAST_MULTIPLIER,
+  TACTICAL_CAMERA_MAX_BETA,
   TACTICAL_CAMERA_MAX_RADIUS,
+  TACTICAL_CAMERA_MIN_BETA,
   TACTICAL_CAMERA_MIN_RADIUS,
   TACTICAL_CAMERA_PAN_SMOOTHING,
   TACTICAL_CAMERA_PAN_SPEED,
@@ -29,6 +31,7 @@ export class TacticalCameraController {
   private camera: ArcRotateCamera;
   private desiredTarget: Vector3;
   private desiredAlpha: number;
+  private desiredBeta: number;
   private desiredRadius: number;
   private keys = new Set<string>();
   /** Pending edge-scroll input applied each tick. -1..1 in each axis. */
@@ -42,6 +45,7 @@ export class TacticalCameraController {
       TACTICAL_CAMERA_DEFAULT.target.z,
     );
     this.desiredAlpha = TACTICAL_CAMERA_DEFAULT.alpha;
+    this.desiredBeta = TACTICAL_CAMERA_DEFAULT.beta;
     this.desiredRadius = TACTICAL_CAMERA_DEFAULT.radius;
     this.snapToDesired();
   }
@@ -69,6 +73,7 @@ export class TacticalCameraController {
       TACTICAL_CAMERA_DEFAULT.target.z,
     );
     this.desiredAlpha = TACTICAL_CAMERA_DEFAULT.alpha;
+    this.desiredBeta = TACTICAL_CAMERA_DEFAULT.beta;
     this.desiredRadius = TACTICAL_CAMERA_DEFAULT.radius;
     this.camera.beta = TACTICAL_CAMERA_DEFAULT.beta;
     this.clampDesired();
@@ -86,6 +91,11 @@ export class TacticalCameraController {
     this.desiredAlpha += direction * 0.28;
   }
 
+  /** Alt + middle-mouse drag: fine rotation from horizontal pixel delta. */
+  applyMouseOrbitDeltaX(dxPixels: number) {
+    this.desiredAlpha += dxPixels * 0.0065;
+  }
+
   /** Mouse-wheel zoom. delta in world units (sign matches "wheel down -> zoom out"). */
   zoom(delta: number) {
     this.desiredRadius = clamp(
@@ -96,9 +106,26 @@ export class TacticalCameraController {
   }
 
   zoomByWheelTicks(deltaY: number) {
-    // Normalize roughly to -1/+1 ticks irrespective of OS wheel granularity.
+    this.zoomByWheelTicksToward(deltaY, null);
+  }
+
+  /**
+   * Wheel zoom with optional RTS-style focal shift: the orbit target nudges
+   * toward the ground point under the cursor so zoom feels anchored to the
+   * battlefield instead of only pulling straight toward map center.
+   */
+  zoomByWheelTicksToward(deltaY: number, ground: { x: number; z: number } | null) {
     const ticks = clamp(deltaY / 100, -3, 3);
-    this.zoom(ticks * TACTICAL_ZOOM_WHEEL_STEP);
+    const delta = ticks * TACTICAL_ZOOM_WHEEL_STEP;
+    const oldRadius = this.desiredRadius;
+    this.zoom(delta);
+    if (!ground) return;
+    const newRadius = this.desiredRadius;
+    if (oldRadius <= 0.01 || Math.abs(newRadius - oldRadius) < 0.01) return;
+    const blend = clamp((1 - newRadius / oldRadius) * 0.48, -0.24, 0.24);
+    this.desiredTarget.x += (ground.x - this.desiredTarget.x) * blend;
+    this.desiredTarget.z += (ground.z - this.desiredTarget.z) * blend;
+    this.clampDesired();
   }
 
   /**
@@ -127,8 +154,11 @@ export class TacticalCameraController {
     const rotT = 1 - Math.exp(-TACTICAL_CAMERA_ROTATE_SMOOTHING * dt);
     const zoomT = 1 - Math.exp(-TACTICAL_CAMERA_ZOOM_SMOOTHING * dt);
 
+    this.desiredBeta = clamp(this.desiredBeta, TACTICAL_CAMERA_MIN_BETA, TACTICAL_CAMERA_MAX_BETA);
+
     this.camera.target = Vector3.Lerp(this.camera.target, this.desiredTarget, panT);
     this.camera.alpha = lerpAngle(this.camera.alpha, this.desiredAlpha, rotT);
+    this.camera.beta = lerp(this.camera.beta, this.desiredBeta, rotT);
     this.camera.radius = lerp(this.camera.radius, this.desiredRadius, zoomT);
   }
 
@@ -175,11 +205,13 @@ export class TacticalCameraController {
     this.desiredTarget.x = clamp(this.desiredTarget.x, -MAP_HALF - margin, MAP_HALF + margin);
     this.desiredTarget.z = clamp(this.desiredTarget.z, -MAP_HALF - margin, MAP_HALF + margin);
     this.desiredRadius = clamp(this.desiredRadius, TACTICAL_CAMERA_MIN_RADIUS, TACTICAL_CAMERA_MAX_RADIUS);
+    this.desiredBeta = clamp(this.desiredBeta, TACTICAL_CAMERA_MIN_BETA, TACTICAL_CAMERA_MAX_BETA);
   }
 
   private snapToDesired() {
     this.camera.target = this.desiredTarget.clone();
     this.camera.alpha = this.desiredAlpha;
+    this.camera.beta = this.desiredBeta;
     this.camera.radius = this.desiredRadius;
   }
 }

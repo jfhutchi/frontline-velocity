@@ -56,6 +56,8 @@ export class TacticalInputController {
   private rightDown: { startX: number; startY: number } | null = null;
   /** Middle-mouse drag state for camera pan. */
   private middleDown: { lastX: number; lastY: number } | null = null;
+  /** Alt + middle mouse: orbit camera instead of panning (RTS orbit-drag). */
+  private altRotate: { lastX: number } | null = null;
   /** Last cursor position for edge-scroll (in CSS pixels of the document). */
   private cursor = { x: -1, y: -1, blocked: false, valid: false };
   /** Touch-pinch state. */
@@ -104,6 +106,7 @@ export class TacticalInputController {
     window.addEventListener('keydown', this.onKeyDown);
     window.addEventListener('keyup', this.onKeyUp);
     window.addEventListener('blur', this.onBlur);
+    document.addEventListener('visibilitychange', this.onVisibilityChange);
     this.canvas.addEventListener('mouseleave', this.onMouseLeave);
   }
 
@@ -120,12 +123,14 @@ export class TacticalInputController {
     window.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('keyup', this.onKeyUp);
     window.removeEventListener('blur', this.onBlur);
+    document.removeEventListener('visibilitychange', this.onVisibilityChange);
     this.canvas.removeEventListener('mouseleave', this.onMouseLeave);
     this.cb.onSelectionBoxChange(null);
     this.camera.clearKeys();
     this.leftDown = null;
     this.rightDown = null;
     this.middleDown = null;
+    this.altRotate = null;
     this.touchPointers.clear();
     this.cursor.valid = false;
   }
@@ -136,7 +141,14 @@ export class TacticalInputController {
       this.camera.setEdgeScroll(0, 0);
       return;
     }
-    const vec = computeEdgeScrollVector(this.cursor.x, this.cursor.y, window.innerWidth, window.innerHeight, this.cursor.blocked);
+    const rect = this.canvas.getBoundingClientRect();
+    const x = this.cursor.x - rect.left;
+    const y = this.cursor.y - rect.top;
+    if (x < 0 || y < 0 || x > rect.width || y > rect.height) {
+      this.camera.setEdgeScroll(0, 0);
+      return;
+    }
+    const vec = computeEdgeScrollVector(x, y, rect.width, rect.height, this.cursor.blocked);
     this.camera.setEdgeScroll(vec.right, vec.forward);
   }
 
@@ -152,7 +164,7 @@ export class TacticalInputController {
   }
 
   private updateHoverFromEvent(ev: PointerEvent) {
-    if (this.middleDown || this.leftDown?.dragging) {
+    if (this.middleDown || this.altRotate || this.leftDown?.dragging) {
       this.cb.onHoverUnitChange(null);
       return;
     }
@@ -181,8 +193,12 @@ export class TacticalInputController {
     if (this.isOverInteractiveUi(ev.target)) return;
 
     if (ev.button === 1) {
-      // Middle drag pan. Capture so dragging off-canvas keeps panning.
-      this.middleDown = { lastX: ev.clientX, lastY: ev.clientY };
+      // Middle drag: pan, or Alt+middle drag orbit (camera rotate).
+      if (ev.altKey) {
+        this.altRotate = { lastX: ev.clientX };
+      } else {
+        this.middleDown = { lastX: ev.clientX, lastY: ev.clientY };
+      }
       try {
         this.canvas.setPointerCapture(ev.pointerId);
       } catch {
@@ -229,6 +245,14 @@ export class TacticalInputController {
         this.lastTouchDistance = dist;
         ev.preventDefault();
       }
+      return;
+    }
+
+    if (this.altRotate) {
+      const dx = ev.clientX - this.altRotate.lastX;
+      this.altRotate.lastX = ev.clientX;
+      this.camera.applyMouseOrbitDeltaX(dx);
+      ev.preventDefault();
       return;
     }
 
@@ -283,8 +307,9 @@ export class TacticalInputController {
       return;
     }
 
-    if (ev.button === 1 && this.middleDown) {
+    if (ev.button === 1 && (this.middleDown || this.altRotate)) {
       this.middleDown = null;
+      this.altRotate = null;
       try {
         this.canvas.releasePointerCapture(ev.pointerId);
       } catch {
@@ -344,6 +369,7 @@ export class TacticalInputController {
       return;
     }
     this.middleDown = null;
+    this.altRotate = null;
     this.leftDown = null;
     this.rightDown = null;
     this.cb.onSelectionBoxChange(null);
@@ -380,7 +406,8 @@ export class TacticalInputController {
     if (!ground) return;
     if (this.command.issueGroundOrder(selected, ground)) {
       this.cb.onSfx('order');
-      this.cb.onEvent('move', `Move order issued (${selected.length})`);
+      const obj = this.resolver.isClickInObjectiveZone(ev.clientX, ev.clientY);
+      this.cb.onEvent('move', obj ? 'Move order to objective' : `Move order issued (${selected.length})`);
     }
   }
 
@@ -405,7 +432,8 @@ export class TacticalInputController {
 
   private onWheel = (ev: WheelEvent) => {
     if (this.isOverInteractiveUi(ev.target)) return;
-    this.camera.zoomByWheelTicks(ev.deltaY);
+    const ground = this.resolver.groundPointAt(ev.clientX, ev.clientY);
+    this.camera.zoomByWheelTicksToward(ev.deltaY, ground);
     ev.preventDefault();
   };
 
@@ -444,11 +472,26 @@ export class TacticalInputController {
   private onBlur = () => {
     this.camera.clearKeys();
     this.middleDown = null;
+    this.altRotate = null;
     this.leftDown = null;
     this.rightDown = null;
     this.touchPointers.clear();
     this.cursor.valid = false;
     this.cb.onSelectionBoxChange(null);
+  };
+
+  private onVisibilityChange = () => {
+    if (document.visibilityState === 'hidden') {
+      this.camera.clearKeys();
+      this.middleDown = null;
+      this.altRotate = null;
+      this.leftDown = null;
+      this.rightDown = null;
+      this.touchPointers.clear();
+      this.cursor.valid = false;
+      this.camera.setEdgeScroll(0, 0);
+      this.cb.onSelectionBoxChange(null);
+    }
   };
 }
 

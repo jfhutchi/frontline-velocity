@@ -20,6 +20,7 @@ import { EffectsRenderer } from './rendering/EffectsRenderer';
 import { TerrainRenderer } from './rendering/TerrainRenderer';
 import { UnitRenderer } from './rendering/UnitRenderer';
 import { Simulation } from './simulation/Simulation';
+import { installScenarioTestHook } from './simulation/ai/__tests__/squadScenarios';
 import { useGameStore, type UnitSummary } from './state/gameStore';
 import type { BattlefieldEvent, GameMode, Unit } from './types';
 import { resolveUnitAgainstObstacles } from './simulation/systems/PathfindingSystem';
@@ -107,6 +108,7 @@ export class GameEngine {
     // Frame the camera over the friendly starting area.
     this.cameraController.resetTacticalCamera(true);
     this.exposeTestHooks();
+    installScenarioTestHook();
 
     this.publishSummaries(true);
   }
@@ -206,6 +208,11 @@ export class GameEngine {
     if (this.summaryAccumulator >= 0.1) {
       this.summaryAccumulator = 0;
       this.publishSummaries(false);
+      // Publish enemy AI debug snapshot at the same cadence so the overlay
+      // updates smoothly without dragging the simulation tick rate down.
+      if (useGameStore.getState().showEnemyDebug) {
+        useGameStore.getState().setEnemyDebug(this.simulation.getEnemyDebugSnapshots());
+      }
     }
 
     // Detect end conditions.

@@ -76,6 +76,13 @@ export interface Unit {
   aiNextThinkAt: number;
   /** Simulation timestamp until which the current target is sticky. */
   targetLockedUntil: number;
+  /**
+   * When true, the unit's targetId / currentOrder are written by an external
+   * controller (e.g. the enemy squad GOAP brain) and the per-unit AI loop
+   * should leave them alone. Friendly behavior and the unit's own combat /
+   * movement systems remain unaffected.
+   */
+  aiManagedExternally?: boolean;
 }
 
 export interface Projectile {

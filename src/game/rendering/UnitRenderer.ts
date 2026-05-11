@@ -253,12 +253,15 @@ export class UnitRenderer {
     const hpBarBg = MeshBuilder.CreatePlane(`hpbg_${unit.id}`, { width: HP_BAR_WIDTH, height: HP_BAR_HEIGHT }, this.scene);
     hpBarBg.material = this.materials.hpBg;
     hpBarBg.parent = hpBarPivot;
-    hpBarBg.billboardMode = 7; // billboard the bg; fill rides along as a child
+    // No per-mesh billboard: hpBarPivot is oriented each frame toward the active
+    // camera so background + fill stay one rigid local group above the hull.
+    hpBarBg.billboardMode = 0;
     hpBarBg.renderingGroupId = 1;
 
     const fillWidth = HP_BAR_WIDTH - HP_BAR_FILL_INSET * 2;
     const hpBarFill = MeshBuilder.CreatePlane(`hpfill_${unit.id}`, { width: fillWidth, height: HP_BAR_HEIGHT - HP_BAR_FILL_INSET * 2 }, this.scene);
     hpBarFill.material = this.materials.hpFill;
+    hpBarFill.billboardMode = 0;
     // Anchor the fill at the LEFT edge of the bg by parenting to the bg and
     // shifting the pivot by half its width — we then scale .x in [0..1] from
     // that left edge so the fill always grows rightward inside the bg.
@@ -296,6 +299,8 @@ export class UnitRenderer {
     if (vis.turretPivot) {
       vis.turretPivot.rotation.y = unit.turretRotation;
     }
+
+    this.orientHealthBarPivot(vis, unit);
 
     const recentlyHit = unit.lastDamagedAt !== undefined && simTime - unit.lastDamagedAt < 1.2;
     vis.selectionRing.isVisible = isSelected && !unit.isDestroyed && !isControlled;
@@ -354,6 +359,18 @@ export class UnitRenderer {
       v.root.dispose(false, true);
     }
     this.visuals.clear();
+  }
+
+  /** Keep the HP bar facing the tactical camera while counter-rotating hull yaw. */
+  private orientHealthBarPivot(vis: UnitVisual, unit: Unit) {
+    const cam = this.scene.activeCamera;
+    if (!cam) return;
+    const dx = cam.position.x - unit.position.x;
+    const dz = cam.position.z - unit.position.z;
+    const faceYaw = Math.atan2(dx, dz);
+    vis.hpBarPivot.rotation.y = faceYaw - unit.rotation;
+    vis.hpBarPivot.rotation.x = 0.2;
+    vis.hpBarPivot.rotation.z = 0;
   }
 
   private updateAttackLine(vis: UnitVisual, unit: Unit, target: Unit | null, isSelected: boolean) {

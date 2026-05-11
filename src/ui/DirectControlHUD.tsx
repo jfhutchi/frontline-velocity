@@ -47,7 +47,7 @@ export const DirectControlHUD: React.FC<Props> = ({ engine }) => {
             engine?.exitDirectControl();
           }}
         >
-          Return (R)
+          Return (R) · Esc pauses
         </button>
       </div>
     </div>
