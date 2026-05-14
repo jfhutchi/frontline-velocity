@@ -2,7 +2,11 @@ import React from 'react';
 import { useGameStore } from '../game/state/gameStore';
 import { AudioManager } from '../game/audio/AudioManager';
 
-export const PauseMenu: React.FC = () => {
+interface Props {
+  onRestart?: () => void;
+}
+
+export const PauseMenu: React.FC<Props> = ({ onRestart }) => {
   const resume = useGameStore((s) => s.resume);
   const returnToMenu = useGameStore((s) => s.returnToMenu);
 
@@ -18,6 +22,18 @@ export const PauseMenu: React.FC = () => {
           }}
         >
           Resume
+        </button>
+        <button
+          onClick={() => {
+            if (!onRestart) return;
+            if (window.confirm('Restart Operation Crossroads from the beginning?')) {
+              AudioManager.play('click');
+              onRestart();
+            }
+          }}
+          disabled={!onRestart}
+        >
+          Restart Mission
         </button>
         <button
           onClick={() => {

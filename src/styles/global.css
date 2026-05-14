@@ -339,12 +339,22 @@ button.danger {
   right: 12px;
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
-  padding: 10px 14px;
+  padding: 8px 12px 10px;
   border-radius: 3px;
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--fg-1);
-  max-width: 260px;
+  max-width: 280px;
+}
+.controls-help.collapsed {
+  padding: 4px 8px;
+  max-width: 110px;
+}
+.controls-help-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 .controls-help h4 {
   margin: 0 0 6px;
@@ -353,6 +363,26 @@ button.danger {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-family: var(--font-sans);
+}
+.controls-help.collapsed h4 {
+  margin: 0;
+}
+.controls-help-toggle {
+  font-family: var(--font-mono);
+  background: transparent;
+  border: 1px solid var(--panel-border);
+  color: var(--fg-1);
+  padding: 0 6px;
+  min-width: 22px;
+  height: 20px;
+  line-height: 18px;
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.controls-help-toggle:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--fg-0);
 }
 .controls-help table {
   border-collapse: collapse;

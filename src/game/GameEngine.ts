@@ -432,6 +432,26 @@ export class GameEngine {
     this.cameraController.resetTacticalCamera();
   }
 
+  /**
+   * Issue Stop/Hold-position to all currently selected friendly units. Used by
+   * the HUD button and the `H` keyboard shortcut.
+   */
+  stopSelectedUnits(): number {
+    const ids = useGameStore.getState().selectedUnitIds;
+    if (!ids.length) return 0;
+    const units: Unit[] = [];
+    for (const id of ids) {
+      const u = this.simulation.state.units.get(id);
+      if (u) units.push(u);
+    }
+    const count = this.commandController.issueHold(units);
+    if (count > 0) {
+      AudioManager.play('click');
+      this.appendInputEventLog('move', `Hold position (${count})`);
+    }
+    return count;
+  }
+
   rotateTacticalCamera(direction: number) {
     this.cameraController.rotateTactical(direction);
   }

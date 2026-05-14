@@ -1,138 +1,86 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface Props {
   mode: 'tactical' | 'directControl' | 'paused' | 'menu' | 'briefing' | 'victory' | 'defeat';
 }
 
+const TACTICAL_ROWS: Array<[string, string]> = [
+  ['L-Click', 'Select unit'],
+  ['Shift + L-Click', 'Add / remove from selection'],
+  ['L-Drag', 'Box select'],
+  ['R-Click ground', 'Attack-move (move + auto-engage)'],
+  ['R-Click enemy', 'Attack target'],
+  ['Mouse edges', 'Pan camera (canvas edges)'],
+  ['M-Drag', 'Pan camera'],
+  ['Alt + M-Drag', 'Rotate camera (orbit)'],
+  ['Wheel', 'Zoom (toward cursor on ground)'],
+  ['WASD / Arrows', 'Pan camera'],
+  ['Shift', 'Faster pan'],
+  ['Q / E', 'Rotate camera'],
+  ['R / Home', 'Reset camera'],
+  ['F', 'Center on selected'],
+  ['H', 'Stop / hold position (selected)'],
+  ['1-9', 'Recall group, or roster slot; double-tap centers camera'],
+  ['Ctrl + 1-9', 'Assign control group'],
+  ['Tab', 'Rotate primary in group, or cycle friendlies'],
+  ['Enter', 'Jump into selected'],
+  ['Space', 'Pause / resume'],
+  ['Esc', 'Clear selection / pause'],
+];
+
+const DC_ROWS: Array<[string, string]> = [
+  ['W / S', 'Forward / Reverse'],
+  ['A / D', 'Turn left / right'],
+  ['L-Click', 'Fire cannon'],
+  ['Space', 'Fire (backup)'],
+  ['R', 'Return to tactical command'],
+  ['Esc', 'Pause (Esc again to resume)'],
+];
+
 export const ControlsHelp: React.FC<Props> = ({ mode }) => {
-  if (mode === 'tactical') {
-    return (
-      <div className="controls-help game-ui-panel" data-ui-interactive="true">
-        <h4>Tactical Controls</h4>
-        <table>
-          <tbody>
-            <tr>
-              <td className="key">L-Click</td>
-              <td>Select unit</td>
-            </tr>
-            <tr>
-              <td className="key">Shift + L-Click</td>
-              <td>Add / remove from selection</td>
-            </tr>
-            <tr>
-              <td className="key">L-Drag</td>
-              <td>Box select</td>
-            </tr>
-            <tr>
-              <td className="key">R-Click ground</td>
-              <td>Attack-move (move + auto-engage)</td>
-            </tr>
-            <tr>
-              <td className="key">R-Click enemy</td>
-              <td>Attack target</td>
-            </tr>
-            <tr>
-              <td className="key">Mouse edges</td>
-              <td>Pan camera (canvas edges)</td>
-            </tr>
-            <tr>
-              <td className="key">M-Drag</td>
-              <td>Pan camera</td>
-            </tr>
-            <tr>
-              <td className="key">Alt + M-Drag</td>
-              <td>Rotate camera (orbit)</td>
-            </tr>
-            <tr>
-              <td className="key">Wheel</td>
-              <td>Zoom (toward cursor on ground)</td>
-            </tr>
-            <tr>
-              <td className="key">WASD / Arrows</td>
-              <td>Pan camera</td>
-            </tr>
-            <tr>
-              <td className="key">Shift</td>
-              <td>Faster pan</td>
-            </tr>
-            <tr>
-              <td className="key">Q / E</td>
-              <td>Rotate camera</td>
-            </tr>
-            <tr>
-              <td className="key">R / Home</td>
-              <td>Reset camera</td>
-            </tr>
-            <tr>
-              <td className="key">F</td>
-              <td>Center on selected</td>
-            </tr>
-            <tr>
-              <td className="key">1-9</td>
-              <td>Recall group, or roster slot if empty; double-tap centers camera</td>
-            </tr>
-            <tr>
-              <td className="key">Ctrl + 1-9</td>
-              <td>Assign control group</td>
-            </tr>
-            <tr>
-              <td className="key">Tab</td>
-              <td>Rotate primary in group, or cycle friendlies</td>
-            </tr>
-            <tr>
-              <td className="key">Enter</td>
-              <td>Jump into selected</td>
-            </tr>
-            <tr>
-              <td className="key">Space</td>
-              <td>Pause / resume</td>
-            </tr>
-            <tr>
-              <td className="key">Esc</td>
-              <td>Clear selection / pause</td>
-            </tr>
-          </tbody>
-        </table>
-        <div className="controls-help-footnote">
-          Mobile: touch still works but is not optimized this version. Double-click &ldquo;select all same type&rdquo; is future work.
-        </div>
+  const [open, setOpen] = useState(true);
+
+  if (mode !== 'tactical' && mode !== 'directControl') return null;
+  const rows = mode === 'tactical' ? TACTICAL_ROWS : DC_ROWS;
+  const title = mode === 'tactical' ? 'Tactical Controls' : 'Vehicle Controls';
+
+  return (
+    <div
+      className={`controls-help game-ui-panel${open ? '' : ' collapsed'}`}
+      data-ui-interactive="true"
+    >
+      <div className="controls-help-header">
+        <h4>{open ? title : 'Controls'}</h4>
+        <button
+          type="button"
+          className="controls-help-toggle"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          title={open ? 'Hide controls' : 'Show controls'}
+        >
+          {open ? '–' : '?'}
+        </button>
       </div>
-    );
-  }
-  if (mode === 'directControl') {
-    return (
-      <div className="controls-help game-ui-panel" data-ui-interactive="true">
-        <h4>Vehicle Controls</h4>
-        <table>
-          <tbody>
-            <tr>
-              <td className="key">W / S</td>
-              <td>Forward / Reverse</td>
-            </tr>
-            <tr>
-              <td className="key">A / D</td>
-              <td>Turn left / right</td>
-            </tr>
-            <tr>
-              <td className="key">L-Click</td>
-              <td>Fire cannon</td>
-            </tr>
-            <tr>
-              <td className="key">Space</td>
-              <td>Fire (backup)</td>
-            </tr>
-            <tr>
-              <td className="key">R</td>
-              <td>Return to tactical command</td>
-            </tr>
-            <tr>
-              <td className="key">Esc</td>
-              <td>Pause (Esc again to resume)</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-  return null;
+      {open && (
+        <>
+          <table>
+            <tbody>
+              {rows.map(([key, action]) => (
+                <tr key={key}>
+                  <td className="key">{key}</td>
+                  <td>{action}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {mode === 'tactical' && (
+            <div className="controls-help-footnote">
+              Mobile: touch still works but is not optimized this version.
+              Double-click &ldquo;select all same type&rdquo; is future work.
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
 };

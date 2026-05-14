@@ -122,6 +122,14 @@ export const GameRoot: React.FC = () => {
         return;
       }
 
+      if (k === 'h' && store.screen === 'tactical') {
+        if (store.selectedUnitIds.length) {
+          engine.stopSelectedUnits();
+        }
+        ev.preventDefault();
+        return;
+      }
+
       if (k === 'tab' && store.screen === 'tactical') {
         ev.preventDefault();
         if (store.selectedUnitIds.length > 1) {
@@ -194,7 +202,16 @@ export const GameRoot: React.FC = () => {
       <div className="hud-layer">
         {ready && (screen === 'tactical' || screen === 'paused') && <TacticalHUD engine={engineRef.current} />}
         {ready && screen === 'directControl' && <DirectControlHUD engine={engineRef.current} />}
-        {paused && (screen === 'tactical' || screen === 'directControl') && <PauseMenu />}
+        {paused && (screen === 'tactical' || screen === 'directControl') && (
+          <PauseMenu
+            onRestart={() => {
+              const engine = engineRef.current;
+              if (!engine) return;
+              engine.resetMission();
+              useGameStore.getState().resume();
+            }}
+          />
+        )}
         {ready && (screen === 'tactical' || screen === 'directControl') && <ControlsHelp mode={screen} />}
         {ready && screen === 'directControl' && isTouchDevice() && (
           <MobileTouchControls
