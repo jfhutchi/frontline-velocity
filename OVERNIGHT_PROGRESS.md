@@ -84,6 +84,121 @@ Files changed:
 
 Validation: build PASS, no chunk warnings.
 
-## Phase B — Camera and tactical-feedback polish
+## Phase B — Camera and tactical-feedback polish (DONE)
 
-(in progress)
+What changed:
+- New `CameraCompass` HUD widget (top-right): rotating N/E/S/W rose driven by the tactical
+  camera yaw, plus a zoom-fraction bar so the player always knows heading and zoom level.
+- `TacticalCameraController` exposes `getYaw`, `getDistance`, `getDistanceLimits` so the
+  HUD can read camera state without poking into Babylon directly.
+- Game store gains `cameraYaw` / `cameraZoomFrac` plus a `setCameraStatus(yaw, zoomFrac)`
+  action with a small dirty-bit so the React tree re-renders only on meaningful change.
+- `GameEngine.publishCameraStatus` runs alongside the 10 Hz summary push.
+- "Reset Camera" now also writes a one-line "Camera reset to overview" event log entry
+  so the player gets feedback when R/Home or the HUD button fires.
+- Added `]` keyboard shortcut to toggle the enemy AI debug overlay (already documented
+  on the HUD button title attribute).
+- Added CSS for the previously-unstyled `enemy-debug-overlay` so toggling AI Debug now
+  produces a usable layout instead of unstyled fallback text.
+
+Files changed:
+- `src/game/rendering/TacticalCameraController.ts`
+- `src/game/state/gameStore.ts`
+- `src/game/GameEngine.ts`
+- `src/game/GameRoot.tsx`
+- `src/ui/CameraCompass.tsx` (new)
+- `src/ui/TacticalHUD.tsx`
+- `src/styles/global.css`
+
+Validation: typecheck PASS, build PASS.
+
+## Phase D — README and documentation (DONE)
+
+What changed:
+- README now lists Stop/Hold (H), Restart Mission, Alt + middle-mouse orbit,
+  zoom-toward-cursor, the camera compass, vendor-chunk split, and the new event-log
+  hooks. Direct-control table separates R (return) from Esc (pause).
+- README adds a Roadmap section pointing at v0.0.4 / v0.0.5 / v0.1.0 work.
+
+Files changed:
+- `README.md`
+
+## Final validation
+
+- `npm run typecheck` — PASS
+- `npm run build` — PASS, no chunk warnings, three cleanly split bundles:
+  - `index-*.js` ≈ 135 kB (app)
+  - `react-vendor-*.js` ≈ 142 kB
+  - `babylonjs-*.js` ≈ 5.07 MB (cached separately on subsequent loads)
+- Vite base path: `/frontline-velocity/` — UNCHANGED.
+- `package.json` `name`: `frontline-velocity` — UNCHANGED, no rename needed.
+
+## Acceptance checklist (per project brief)
+
+Build / deploy:
+1. `npm install` — PASS
+2. `npm run typecheck` — PASS
+3. `npm run build` — PASS
+4. Vite base path `/frontline-velocity/` — UNCHANGED
+5. GitHub Pages workflow files — UNTOUCHED
+
+Desktop tactical camera (6-18): PASS via existing TacticalCameraController +
+TacticalInputController, now with compass feedback and camera-reset event log.
+
+Selection (19-25): PASS via SelectionController + drag-rect overlay + roster
+group-count badge.
+
+Commands (26-32): PASS via CommandController formation offsets and event log;
+Stop/Hold added on top of the existing move/attack-move/attack flow.
+
+Control groups (33-36): PASS — `Ctrl + 1-9` assigns, `1-9` recalls, double-tap
+centers (already wired in GameRoot).
+
+Health bars (37-43): PASS — HUD roster uses vertical-flex with a clipped fill,
+world-space bars share a single yaw-billboarded parent so bg + fill never
+desync at any camera angle.
+
+Direct-control (44-49): PASS — direct-control mode preserved, tactical input
+detached during direct control and reattached on return; Esc pauses from
+direct control.
+
+Gameplay (50-58): Operation Crossroads, friendly autonomous combat, enemy AI,
+projectile damage, victory/defeat, restart from pause — all preserved.
+
+## Final summary
+
+Completed:
+- Phase A: Stop/Hold, Restart Mission, collapsible Controls Help.
+- Phase B: Camera compass / zoom HUD, camera-reset event log, AI Debug `]`
+  hotkey, styled enemy debug overlay.
+- Phase C: Vite manualChunks splits Babylon and React from app code.
+- Phase D: README + roadmap update.
+
+Partially completed / deferred (intentional):
+- Mobile control polish — explicitly out of scope per the brief.
+- Friendly autonomous-fire tuning — current AI already engages along
+  attack-move paths, slows to fire, and resumes; left untouched to avoid
+  destabilizing v0.0.3 the night before sign-off.
+
+Not completed:
+- New mission content (out of scope; v0.0.5 roadmap).
+- Pathfinding rewrite (out of scope; v0.0.4 roadmap).
+- Mouse-controlled turret in direct control (out of scope; future).
+
+Files added:
+- `OVERNIGHT_PROGRESS.md`
+- `src/ui/CameraCompass.tsx`
+
+Known bugs: none observed at typecheck / build time.
+
+Recommended next steps:
+- Manual desktop QA pass against the acceptance checklist (the validation
+  loop in this session was static-analysis only — no live `npm run dev`
+  smoke test was performed because the host shell is non-interactive).
+- v0.0.4 backlog from the brief: pathfinding around buildings, attack-move
+  balancing, vehicle acceleration tuning, more polished explosions, terrain
+  variation, enemy patrol/guard logic.
+
+Recommended commit message:
+`Overhaul desktop RTS controls and tactical camera for v0.0.3`
+

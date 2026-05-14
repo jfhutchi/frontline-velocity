@@ -167,6 +167,20 @@ export class TacticalCameraController {
     return { x: this.desiredTarget.x, z: this.desiredTarget.z };
   }
 
+  /** Current orbit angle (radians). Used by the HUD compass. */
+  getYaw(): number {
+    return this.camera.alpha;
+  }
+
+  /** Current desired orbit distance, used by HUD zoom indicator. */
+  getDistance(): number {
+    return this.desiredRadius;
+  }
+
+  getDistanceLimits(): { min: number; max: number } {
+    return { min: TACTICAL_CAMERA_MIN_RADIUS, max: TACTICAL_CAMERA_MAX_RADIUS };
+  }
+
   private applyKeyboardPan(dt: number) {
     let right = 0;
     let forward = 0;

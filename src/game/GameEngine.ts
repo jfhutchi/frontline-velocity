@@ -213,6 +213,7 @@ export class GameEngine {
       if (useGameStore.getState().showEnemyDebug) {
         useGameStore.getState().setEnemyDebug(this.simulation.getEnemyDebugSnapshots());
       }
+      this.publishCameraStatus();
     }
 
     // Detect end conditions.
@@ -317,6 +318,15 @@ export class GameEngine {
 
     this.effectsRenderer.update(state);
     this.terrainRenderer.updateObjective(state.objective);
+  }
+
+  private publishCameraStatus() {
+    const tactical = this.cameraController.getTactical();
+    const yaw = tactical.getYaw();
+    const dist = tactical.getDistance();
+    const { min, max } = tactical.getDistanceLimits();
+    const frac = max > min ? (dist - min) / (max - min) : 0.5;
+    useGameStore.getState().setCameraStatus(yaw, Math.max(0, Math.min(1, frac)));
   }
 
   private appendInputEventLog(
@@ -430,6 +440,7 @@ export class GameEngine {
 
   resetTacticalCamera() {
     this.cameraController.resetTacticalCamera();
+    this.appendInputEventLog('move', 'Camera reset to overview');
   }
 
   /**

@@ -130,6 +130,13 @@ export const GameRoot: React.FC = () => {
         return;
       }
 
+      if (k === ']' && store.screen === 'tactical') {
+        ev.preventDefault();
+        store.toggleEnemyDebug();
+        AudioManager.play('click');
+        return;
+      }
+
       if (k === 'tab' && store.screen === 'tactical') {
         ev.preventDefault();
         if (store.selectedUnitIds.length > 1) {

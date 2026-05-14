@@ -4,6 +4,7 @@ import { AudioManager } from '../game/audio/AudioManager';
 import { ObjectivePanel } from './ObjectivePanel';
 import { UnitPanel } from './UnitPanel';
 import { EnemyTacticsDebug } from './EnemyTacticsDebug';
+import { CameraCompass } from './CameraCompass';
 import type { GameEngine } from '../game/GameEngine';
 
 interface Props {
@@ -178,6 +179,7 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
 
       <UnitPanel engine={engine} />
       <EnemyTacticsDebug />
+      <CameraCompass />
     </>
   );
 };
