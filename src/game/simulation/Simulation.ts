@@ -3,6 +3,7 @@ import { createOperationCrossroads } from '../missions/operationCrossroads';
 import type { Order, Projectile, SimulationState, Unit, Vec3 } from '../types';
 import { CoverProvider, EnemyCommanderAI, EnemySquadGOAPBrain, type SquadDebugSnapshot } from './ai';
 import { updateAI } from './systems/AISystem';
+import { buildBuildingStateMap } from './systems/BuildingSystem';
 import { updateCombat } from './systems/CombatSystem';
 import { applyDamage } from './systems/DamageSystem';
 import { updateMovement } from './systems/MovementSystem';
@@ -99,6 +100,7 @@ export class Simulation {
       eventLog: [],
       objective: mission.objective,
       mission,
+      buildings: buildBuildingStateMap(mission),
       result: null,
     };
     pushBattlefieldEvent(state, 'mission_start', 'Operation Crossroads begun', 999);

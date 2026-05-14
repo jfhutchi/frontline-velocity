@@ -21,7 +21,7 @@ import { TerrainRenderer } from './rendering/TerrainRenderer';
 import { UnitRenderer } from './rendering/UnitRenderer';
 import { Simulation } from './simulation/Simulation';
 import { installScenarioTestHook } from './simulation/ai/__tests__/squadScenarios';
-import { useGameStore, type UnitSummary } from './state/gameStore';
+import { useGameStore, type MinimapBlip, type MinimapSnapshot, type UnitSummary } from './state/gameStore';
 import type { BattlefieldEvent, GameMode, Unit } from './types';
 import { resolveUnitAgainstObstacles } from './simulation/systems/PathfindingSystem';
 
@@ -318,6 +318,7 @@ export class GameEngine {
 
     this.effectsRenderer.update(state);
     this.terrainRenderer.updateObjective(state.objective);
+    this.terrainRenderer.syncBuildings(state);
   }
 
   private publishCameraStatus() {
@@ -382,6 +383,47 @@ export class GameEngine {
     store.setUnitSummaries(summaries);
     store.setObjective({ ...state.objective });
     store.setEventLog([...state.eventLog]);
+    store.setMinimap(this.buildMinimapSnapshot());
+  }
+
+  private buildMinimapSnapshot(): MinimapSnapshot {
+    const state = this.simulation.state;
+    const selected = new Set(useGameStore.getState().selectedUnitIds);
+    const blips: MinimapBlip[] = [];
+    for (const u of state.units.values()) {
+      if (u.isDestroyed) continue;
+      blips.push({
+        id: u.id,
+        kind: u.faction === 'friendly' ? 'friendly' : 'enemy',
+        x: u.position.x,
+        z: u.position.z,
+        selected: selected.has(u.id),
+      });
+    }
+    for (const b of state.buildings.values()) {
+      blips.push({
+        id: b.id,
+        kind: b.isDestroyed ? 'rubble' : 'building',
+        x: b.position.x,
+        z: b.position.z,
+        destroyed: b.isDestroyed,
+      });
+    }
+    const obj = state.objective;
+    const heldFrac = obj.requiredHoldSeconds > 0
+      ? Math.max(0, Math.min(1, obj.heldSeconds / obj.requiredHoldSeconds))
+      : (obj.captured ? 1 : 0);
+    return {
+      mapSize: state.mission.mapSize,
+      blips,
+      objective: {
+        x: obj.position.x,
+        z: obj.position.z,
+        radius: obj.radius,
+        controlPercent: heldFrac,
+      },
+      cameraFocus: { x: this.ctx.camera.target.x, z: this.ctx.camera.target.z },
+    };
   }
 
   jumpIntoSelected() {
@@ -441,6 +483,11 @@ export class GameEngine {
   resetTacticalCamera() {
     this.cameraController.resetTacticalCamera();
     this.appendInputEventLog('move', 'Camera reset to overview');
+  }
+
+  /** Pan the tactical camera to a world position (used by the minimap). */
+  panTacticalCameraTo(worldX: number, worldZ: number) {
+    this.cameraController.getTactical().centerOn(worldX, worldZ);
   }
 
   /**

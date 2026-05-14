@@ -33,6 +33,22 @@ export const UNIT_TEMPLATES: Record<UnitType, UnitTemplate> = {
       splashRadius: 2.5,
     },
   },
+  heavyTank: {
+    type: 'heavyTank',
+    health: 180,
+    armor: 65,
+    speed: 4.2,
+    radius: 1.9,
+    isPlayerControllable: true,
+    weapon: {
+      name: '88mm Cannon',
+      damage: 70,
+      range: 56,
+      reloadSeconds: 4.2,
+      projectileSpeed: 78,
+      splashRadius: 3.4,
+    },
+  },
   reconJeep: {
     type: 'reconJeep',
     health: 45,
@@ -95,6 +111,22 @@ export const UNIT_TEMPLATES: Record<UnitType, UnitTemplate> = {
       splashRadius: 2.2,
     },
   },
+  mortar: {
+    type: 'mortar',
+    health: 38,
+    armor: 0,
+    speed: 0,
+    radius: 1.0,
+    isPlayerControllable: false,
+    weapon: {
+      name: '81mm Mortar',
+      damage: 42,
+      range: 78,
+      reloadSeconds: 5.5,
+      projectileSpeed: 38,
+      splashRadius: 4.6,
+    },
+  },
 };
 
 export function makeUnit(opts: {
@@ -127,7 +159,12 @@ export function makeUnit(opts: {
     currentSpeed: 0,
     aiState: opts.faction === 'enemy' ? 'guard' : 'idle',
     aiHome: { ...opts.position },
-    aiLeashRadius: opts.type === 'lightTank' ? 34 : opts.type === 'infantry' ? 22 : 18,
+    aiLeashRadius:
+      opts.type === 'lightTank' ? 34 :
+      opts.type === 'infantry' ? 22 :
+      opts.type === 'heavyTank' ? 28 :
+      opts.type === 'mortar' ? 8 :
+      18,
     aiNextThinkAt: 0,
     targetLockedUntil: 0,
   };

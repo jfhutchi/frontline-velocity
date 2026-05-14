@@ -5,6 +5,7 @@ import { ObjectivePanel } from './ObjectivePanel';
 import { UnitPanel } from './UnitPanel';
 import { EnemyTacticsDebug } from './EnemyTacticsDebug';
 import { CameraCompass } from './CameraCompass';
+import { Minimap } from './Minimap';
 import type { GameEngine } from '../game/GameEngine';
 
 interface Props {
@@ -180,6 +181,7 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
       <UnitPanel engine={engine} />
       <EnemyTacticsDebug />
       <CameraCompass />
+      <Minimap engine={engine} />
     </>
   );
 };

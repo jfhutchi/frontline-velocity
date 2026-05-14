@@ -9,10 +9,12 @@ interface Props {
 
 const UNIT_LABELS: Record<string, string> = {
   mediumTank: 'Medium Tank',
+  heavyTank: 'Heavy Tank',
   reconJeep: 'Recon Jeep',
   infantry: 'Infantry',
   lightTank: 'Light Tank',
   antiTankGun: 'AT Gun',
+  mortar: 'Mortar Team',
 };
 
 export const UnitPanel: React.FC<Props> = ({ engine }) => {

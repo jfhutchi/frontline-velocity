@@ -6,10 +6,12 @@ export type Faction = 'friendly' | 'enemy';
 
 export type UnitType =
   | 'mediumTank'
+  | 'heavyTank'
   | 'reconJeep'
   | 'infantry'
   | 'lightTank'
-  | 'antiTankGun';
+  | 'antiTankGun'
+  | 'mortar';
 
 export type OrderKind = 'idle' | 'move' | 'attack' | 'hold' | 'patrol';
 export type AIState = 'idle' | 'patrol' | 'guard' | 'alert' | 'engage' | 'reposition' | 'destroyed';
@@ -132,6 +134,8 @@ export interface MissionDefinition {
 
 export type DecorationKind = 'building' | 'tree' | 'road' | 'fieldPatch' | 'hill';
 
+export type BuildingStyle = 'house' | 'barn' | 'factory' | 'church' | 'bunker';
+
 export interface MapDecoration {
   id: string;
   kind: DecorationKind;
@@ -140,6 +144,25 @@ export interface MapDecoration {
   scale: Vec3;
   /** Optional palette tint hint for the renderer. */
   tint?: 'wall' | 'roof' | 'pine' | 'oak' | 'shrub' | 'dirt' | 'grass' | 'asphalt';
+  /** Building variant; renderer picks geometry/color based on this. */
+  buildingStyle?: BuildingStyle;
+  /** Whether this decoration can be destroyed by splash/projectile damage. */
+  destructible?: boolean;
+  /** Initial structural HP for destructible buildings. */
+  maxHealth?: number;
+}
+
+/** Live structural HP state for a destructible decoration. */
+export interface BuildingState {
+  id: string;
+  decorationId: string;
+  position: Vec3;
+  /** Same blocker radius the pathing system uses. */
+  radius: number;
+  health: number;
+  maxHealth: number;
+  isDestroyed: boolean;
+  destroyedAt?: number;
 }
 
 export interface EffectEvent {
@@ -166,6 +189,8 @@ export interface SimulationState {
   eventLog: BattlefieldEvent[];
   objective: ObjectiveZone;
   mission: MissionDefinition;
+  /** Per-building structural HP for destructible decorations. */
+  buildings: Map<string, BuildingState>;
   /** Set if the simulation is over: 'victory' | 'defeat'. */
   result: null | 'victory' | 'defeat';
 }

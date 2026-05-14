@@ -1,5 +1,5 @@
 import { MAP_HALF, PATH_OBSTACLE_MARGIN } from '../../constants';
-import type { MapDecoration, MissionDefinition, SimulationState, Unit, Vec3 } from '../../types';
+import type { MapDecoration, SimulationState, Unit, Vec3 } from '../../types';
 import { clamp } from '../math';
 
 interface Obstacle {
@@ -11,7 +11,7 @@ interface Obstacle {
 
 export function planPath(state: SimulationState, from: Vec3, destination: Vec3, unitRadius: number): Vec3[] {
   const target = clampToBattlefield(destination, unitRadius);
-  const obstacles = getBuildingObstacles(state.mission, unitRadius + PATH_OBSTACLE_MARGIN);
+  const obstacles = getBuildingObstacles(state, unitRadius + PATH_OBSTACLE_MARGIN);
   const path: Vec3[] = [];
   let current = clampToBattlefield(from, unitRadius);
   let guard = 0;
@@ -38,7 +38,7 @@ export function planPath(state: SimulationState, from: Vec3, destination: Vec3, 
 }
 
 export function hasLineOfSight(state: SimulationState, from: Vec3, to: Vec3, clearance = 0.35): boolean {
-  const obstacles = getBuildingObstacles(state.mission, clearance);
+  const obstacles = getBuildingObstacles(state, clearance);
   return !firstBlockingObstacle(from, to, obstacles);
 }
 
@@ -46,15 +46,27 @@ export function segmentHitsBuilding(state: SimulationState, from: Vec3, to: Vec3
   return !hasLineOfSight(state, from, to, clearance);
 }
 
+/**
+ * Returns the building id whose obstacle circle the given segment crosses
+ * first, or null when the segment has clear line of sight. Used by the
+ * projectile system to apply structural damage to the building it actually
+ * struck instead of just consuming the projectile.
+ */
+export function findBuildingHitByRay(state: SimulationState, from: Vec3, to: Vec3, clearance = 0.35): string | null {
+  const obstacles = getBuildingObstacles(state, clearance);
+  const hit = firstBlockingObstacle(from, to, obstacles);
+  return hit ? hit.id : null;
+}
+
 export function steerTargetAroundObstacles(state: SimulationState, from: Vec3, target: Vec3, unitRadius: number): Vec3 {
-  const obstacles = getBuildingObstacles(state.mission, unitRadius + PATH_OBSTACLE_MARGIN * 0.8);
+  const obstacles = getBuildingObstacles(state, unitRadius + PATH_OBSTACLE_MARGIN * 0.8);
   const blocker = firstBlockingObstacle(from, target, obstacles);
   if (!blocker) return target;
   return clampToBattlefield(waypointAroundObstacle(from, target, blocker, 1), unitRadius);
 }
 
 export function resolveUnitAgainstObstacles(unit: Unit, state: SimulationState) {
-  const obstacles = getBuildingObstacles(state.mission, unit.radius + 0.35);
+  const obstacles = getBuildingObstacles(state, unit.radius + 0.35);
   for (const obstacle of obstacles) {
     const dx = unit.position.x - obstacle.x;
     const dz = unit.position.z - obstacle.z;
@@ -77,15 +89,24 @@ export function clampToBattlefield(point: Vec3, margin = 1): Vec3 {
   };
 }
 
-function getBuildingObstacles(mission: MissionDefinition, margin: number): Obstacle[] {
-  return mission.decorations
-    .filter((d): d is MapDecoration => d.kind === 'building')
-    .map((d) => ({
-      id: d.id,
-      x: d.position.x,
-      z: d.position.z,
-      radius: Math.hypot(d.scale.x, d.scale.z) * 0.58 + margin,
-    }));
+function getBuildingObstacles(state: SimulationState, margin: number): Obstacle[] {
+  const buildings = state.buildings;
+  const out: Obstacle[] = [];
+  for (const d of state.mission.decorations) {
+    if (d.kind !== 'building') continue;
+    const dec = d as MapDecoration;
+    // Destroyed destructible buildings stop blocking pathing and LOS so the
+    // battlefield opens up as the player and AI tear down structures.
+    const live = buildings.get(dec.id);
+    if (live && live.isDestroyed) continue;
+    out.push({
+      id: dec.id,
+      x: dec.position.x,
+      z: dec.position.z,
+      radius: Math.hypot(dec.scale.x, dec.scale.z) * 0.58 + margin,
+    });
+  }
+  return out;
 }
 
 function firstBlockingObstacle(from: Vec3, to: Vec3, obstacles: Obstacle[]): Obstacle | null {

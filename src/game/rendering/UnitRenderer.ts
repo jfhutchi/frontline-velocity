@@ -109,9 +109,10 @@ export class UnitRenderer {
     let turretPivot: TransformNode | undefined;
 
     switch (unit.type) {
+      case 'heavyTank':
       case 'mediumTank':
       case 'lightTank': {
-        const scale = unit.type === 'mediumTank' ? 1 : 0.88;
+        const scale = unit.type === 'heavyTank' ? 1.18 : unit.type === 'mediumTank' ? 1 : 0.88;
         hull = this.mesh(`hull_${unit.id}`, MeshBuilder.CreateBox(`hull_${unit.id}`, { width: 3.2 * scale, height: 0.85 * scale, depth: 4.25 * scale }, this.scene), hullMat, root);
         hull.position.y = 0.75 * scale;
 
@@ -186,6 +187,27 @@ export class UnitRenderer {
           const rifle = this.mesh(`rifle_${unit.id}_${x}_${z}`, MeshBuilder.CreateCylinder(`rifle_${unit.id}_${x}_${z}`, { diameter: 0.055, height: 0.8, tessellation: 6 }, this.scene), this.materials.gunMetal, root);
           rifle.rotation.x = Math.PI / 2;
           rifle.position = new Vector3(x + 0.08, 0.74, z + 0.33);
+        }
+        break;
+      }
+      case 'mortar': {
+        hull = this.mesh(`hull_${unit.id}`, MeshBuilder.CreateBox(`hull_${unit.id}`, { width: 1.4, height: 0.25, depth: 1.4 }, this.scene), hullMat, root);
+        hull.position.y = 0.18;
+        const baseplate = this.mesh(`mortar_base_${unit.id}`, MeshBuilder.CreateCylinder(`mortar_base_${unit.id}`, { diameter: 1.6, height: 0.18, tessellation: 14 }, this.scene), this.materials.gunMetal, root);
+        baseplate.position.y = 0.09;
+        const bipod = this.mesh(`mortar_bipod_${unit.id}`, MeshBuilder.CreateBox(`mortar_bipod_${unit.id}`, { width: 0.85, height: 0.07, depth: 0.07 }, this.scene), this.materials.gunMetal, root);
+        bipod.position = new Vector3(0, 0.55, 0.18);
+        bipod.rotation.x = -0.35;
+        turretPivot = new TransformNode(`turretPivot_${unit.id}`, this.scene);
+        turretPivot.parent = root;
+        turretPivot.position.y = 0.5;
+        const tube = this.mesh(`mortar_tube_${unit.id}`, MeshBuilder.CreateCylinder(`mortar_tube_${unit.id}`, { diameter: 0.24, height: 1.85, tessellation: 10 }, this.scene), this.materials.gunMetal, turretPivot);
+        tube.rotation.x = -0.55; // angled up so it reads as indirect-fire
+        tube.position.z = 0.2;
+        tube.position.y = 0.55;
+        for (let i = 0; i < 3; i += 1) {
+          const ammo = this.mesh(`mortar_ammo_${unit.id}_${i}`, MeshBuilder.CreateCylinder(`mortar_ammo_${unit.id}_${i}`, { diameter: 0.18, height: 0.32, tessellation: 8 }, this.scene), markerMat, root);
+          ammo.position = new Vector3(-0.55 + i * 0.22, 0.34, -0.7);
         }
         break;
       }

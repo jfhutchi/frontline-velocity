@@ -5,7 +5,38 @@ armored platoon trying to capture a defended village crossroads. Issue
 attack-move orders from the tactical command view, then jump into a vehicle and
 fight directly from a third-person combat camera.
 
-**Current version: v0.0.3 — desktop RTS controls overhaul**
+**Current version: v0.0.4 — expanded Crossroads, destructible city, minimap**
+
+## What's new in v0.0.4
+
+v0.0.4 builds on the v0.0.3 desktop RTS scaffolding with a content and
+graphics push. The mission is bigger, denser, and noisier, and the HUD
+exposes a tactical minimap so you can keep track of all of it.
+
+- Two new unit types: `Heavy Tank` (slow, durable, hard-hitting) and
+  `Mortar Team` (indirect fire support).
+- Destructible buildings: every house, barn, factory, church, and bunker
+  in Operation Crossroads has its own HP pool. Tank shells damage them
+  directly, splash damage from explosions chews through nearby
+  structures, and collapsed buildings drop out of the pathing graph and
+  turn into rubble piles in the world.
+- Bigger garrison: more enemy infantry, AT guns, light tanks, and now
+  heavy tanks and mortars scattered through a multi-block town instead
+  of a single firing line.
+- Denser city: longer cross-roads, multiple lanes, mixed buildings with
+  five distinct styles (house, barn, factory, church, bunker) plus
+  rooftop and chimney details.
+- Procedural ground texture: a hand-painted dynamic texture replaces
+  the flat green plane, with grass tonal variation, mud patches, and
+  gravel streaks along the road axes. Tiled across the map.
+- Tactical minimap (bottom-right HUD panel): friendly / enemy / building
+  / rubble blips, objective ring with capture progress, and a camera
+  facing indicator. Left-click anywhere on the minimap to pan the
+  tactical camera to that world position.
+- Ambient WW2-flavor war-drum bed synthesized at runtime via the Web
+  Audio API. No copyrighted audio is loaded, referenced, or shipped.
+- Main menu now displays the version number and a short version label so
+  you can see at a glance which build you are looking at.
 
 ## Legal note
 
@@ -209,18 +240,24 @@ summary snapshots from Zustand instead of updating every render frame.
 - Box selection projects unit positions to screen space and ignores models
   partially obscured behind terrain or buildings; very small units at extreme
   zoom-out may need a slightly wider drag.
-- Audio remains procedurally generated; there is no mission music yet.
+- Audio is procedurally synthesized in the browser (no external assets).
+  The v0.0.4 ambient bed is a simple drum/drone loop and is intentionally
+  low-key; mission-specific cues remain future work.
+- Destructible buildings have HP, damage, and collapse-to-rubble, but the
+  pathing graph only refreshes per-frame from the live obstacle set rather
+  than rebuilding a full navmesh, so very tightly packed alleys can still
+  produce occasional imperfect routes.
 
 ## Roadmap
 
-- v0.0.4 — pathfinding polish around dense buildings, better attack-move
-  balancing, vehicle acceleration/turning tuning, more polished explosions
-  and smoke, terrain material variation, more robust enemy patrol/guard
-  logic, and a confirmable mission-restart hotkey.
-- v0.0.5 — second mission, better objective system (timed waves, multi-zone
-  control), saveable settings, and a mission-select shell.
-- v0.1.0 — campaign shell with save progression, persistent unit roster, and
-  a small in-mission tutorial overlay.
+- v0.0.5 — full navmesh pathing in the dense town, real animated unit
+  models (legged infantry, recoil on turret), wider building damage
+  states (smoked, on-fire, partial-collapse), additional mission with
+  multi-zone control, mission-select shell.
+- v0.0.6 — second campaign mission, dynamic weather (rain / dust kicked
+  up by vehicles), unit veterancy, saveable settings.
+- v0.1.0 — campaign shell with save progression, persistent unit roster,
+  and a small in-mission tutorial overlay.
 
 ## License
 
