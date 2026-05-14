@@ -267,3 +267,87 @@ Build / metadata:
   chunk; warning limit raised in v0.0.3).
 
 
+# GitHub Pages deployment verification (post-v0.0.4)
+
+Verified end-to-end that the live deploy surface is healthy. No fixes were
+required; nothing changed in the build, workflow, or asset pipeline.
+
+## Workflow (`.github/workflows/deploy-pages.yml`)
+
+- Triggers: `push` to `main`, plus `workflow_dispatch` for manual runs.
+- Permissions: `contents: read`, `pages: write`, `id-token: write` — correct
+  for `actions/deploy-pages@v4`.
+- Action versions in use (all current as of v0.0.4):
+  - `actions/checkout@v4`
+  - `actions/setup-node@v4` (Node 20, npm cache)
+  - `actions/configure-pages@v5`
+  - `actions/upload-pages-artifact@v3`
+  - `actions/deploy-pages@v4`
+- Build job runs `npm ci` → `npm run typecheck` → `npm run build`, then
+  uploads `dist/` as the Pages artifact. Deploy job consumes that artifact
+  in the `github-pages` environment.
+- Companion `.github/workflows/build.yml` runs typecheck + build on every
+  branch and PR, so the feature branch is also exercised in CI.
+
+## Vite config audit
+
+- `vite.config.ts` still has `base: '/frontline-velocity/'`. **Unchanged.**
+- `manualChunks` produces three clean output bundles: app `index-*.js`,
+  `react-vendor-*.js`, `babylonjs-*.js`. None of the chunks contain
+  hard-coded asset paths that would break under the `/frontline-velocity/`
+  base; cross-chunk imports go through Vite's chunk emitter, which uses
+  the correct `base`-prefixed URLs in the entry HTML.
+
+## Source-level asset path audit
+
+- `rg` for `fetch(`, `new URL(`, `import('...')` with absolute `/` paths,
+  literal `/assets/`, `localhost`, `http://`, `https://` in `src/` —
+  **zero matches.** No source-level absolute URLs exist.
+- Procedural content paths are pure-runtime:
+  - `TerrainRenderer.buildGroundMaterial` uses a Babylon `DynamicTexture`
+    drawn to a canvas — no network fetch.
+  - `AudioManager` synthesizes ambient music via Web Audio — no network
+    fetch, no copyrighted-asset references.
+- `public/` contains only `favicon.svg`; no other static assets that would
+  need base-path adjustment.
+
+## Build smoke test
+
+- `npm run typecheck` — **PASS** (`tsc -p tsconfig.json --noEmit`, clean).
+- `npm run build` — **PASS**, 1,999 modules transformed, no warnings:
+  - `dist/index.html` 0.95 kB
+  - `dist/assets/index-*.css` 18.20 kB
+  - `dist/assets/react-vendor-*.js` 141.93 kB
+  - `dist/assets/index-*.js` 152.36 kB
+  - `dist/assets/babylonjs-*.js` 5,072.00 kB
+- `dist/index.html` — every `<script>` / `<link>` href is prefixed with
+  `/frontline-velocity/assets/...`. No bare `/assets/...` or absolute
+  external URLs.
+
+## Live URL check — `https://jfhutchi.github.io/frontline-velocity/`
+
+- Root HTML: **HTTP 200**, title `Steel Command: Frontline Velocity`,
+  all referenced module/CSS URLs correctly prefixed with
+  `/frontline-velocity/`.
+- Spot-checked asset URLs (HEAD requests):
+  - `assets/index-C0pk5-ZT.js` → 200
+  - `assets/react-vendor-B-xc1j1m.js` → 200
+  - `assets/babylonjs-CdKpYIqi.js` → 200
+  - `assets/index-C22zaQX_.css` → 200
+  - `favicon.svg` → 200
+
+## Known limitation (intentional, not a bug)
+
+The live deploy currently serves **v0.0.3** because the v0.0.4 work
+landed on `codex/improve-v002-camera-ai-graphics` and the
+`deploy-pages.yml` workflow only auto-deploys from `main`. The v0.0.4
+build artifacts produced locally are correct and Pages-ready; they will
+go live once the feature branch is merged to `main` (or a maintainer
+runs the workflow manually via `workflow_dispatch` against `main`
+after merge).
+
+## Outcome
+
+No Pages-breaking issues found. No source, workflow, or config changes
+were made during this verification pass. No commit created.
+
