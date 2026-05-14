@@ -30,6 +30,16 @@ export class CommandController {
     return true;
   }
 
+  /** "Stop / Hold position" — cancels move orders for all eligible selected units. */
+  issueHold(units: Unit[]): number {
+    const eligible = units.filter((u) => u.isPlayerControllable && !u.isDestroyed);
+    let count = 0;
+    for (const u of eligible) {
+      if (this.sim.issueHoldOrder(u.id)) count += 1;
+    }
+    return count;
+  }
+
   /** Right-click enemy: order all selected units to engage that enemy. */
   issueAttackTarget(units: Unit[], targetId: string): boolean {
     const attackers = units.filter((u) => u.isPlayerControllable && !u.isDestroyed);

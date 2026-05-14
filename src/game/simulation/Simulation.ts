@@ -205,6 +205,22 @@ export class Simulation {
     return true;
   }
 
+  /**
+   * Player "Stop / Hold position" command. Cancels active move orders and clears
+   * any auto-acquired target so the unit holds at its current position. Combat
+   * AI may still re-engage if a fresh threat appears in detection range — this
+   * is intentional so a held unit still defends itself.
+   */
+  issueHoldOrder(unitId: string): boolean {
+    const u = this.state.units.get(unitId);
+    if (!u || u.isDestroyed || !u.isPlayerControllable) return false;
+    u.targetId = null;
+    u.currentOrder = { kind: 'hold', destination: { x: u.position.x, y: 0, z: u.position.z } };
+    u.lastOrderDestination = { x: u.position.x, y: 0, z: u.position.z };
+    u.currentSpeed = 0;
+    return true;
+  }
+
   /** Direct-control: spawn a projectile from the controlled unit immediately. */
   fireFromControlled(unitId: string): boolean {
     const u = this.state.units.get(unitId);

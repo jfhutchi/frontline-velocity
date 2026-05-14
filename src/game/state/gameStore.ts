@@ -58,6 +58,10 @@ export interface GameStoreState {
   /** Counter incremented when player takes damage to flash the screen. */
   damageFlashTick: number;
 
+  /** Tactical camera yaw (alpha, radians) and zoom for HUD compass/zoom. */
+  cameraYaw: number;
+  cameraZoomFrac: number;
+
   /** Optional enemy AI debug snapshot pushed by the simulation each tick. */
   enemyDebug: SquadDebugSnapshot[];
   /** Player toggle for the enemy AI debug overlay. */
@@ -94,6 +98,7 @@ export interface GameStoreState {
   exitDirectControl: () => void;
   setResult: (r: 'victory' | 'defeat') => void;
   flashDamage: () => void;
+  setCameraStatus: (yaw: number, zoomFrac: number) => void;
   setEnemyDebug: (snaps: SquadDebugSnapshot[]) => void;
   toggleEnemyDebug: () => void;
   setShowEnemyDebug: (v: boolean) => void;
@@ -116,6 +121,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   objective: null,
   result: null,
   damageFlashTick: 0,
+  cameraYaw: 0,
+  cameraZoomFrac: 0.5,
   enemyDebug: [],
   showEnemyDebug: false,
 
@@ -273,6 +280,13 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
 
   flashDamage: () => {
     set({ damageFlashTick: get().damageFlashTick + 1 });
+  },
+
+  setCameraStatus: (yaw, zoomFrac) => {
+    const prevYaw = get().cameraYaw;
+    const prevZoom = get().cameraZoomFrac;
+    if (Math.abs(prevYaw - yaw) < 0.005 && Math.abs(prevZoom - zoomFrac) < 0.005) return;
+    set({ cameraYaw: yaw, cameraZoomFrac: zoomFrac });
   },
 
   setEnemyDebug: (snaps) => set({ enemyDebug: snaps }),

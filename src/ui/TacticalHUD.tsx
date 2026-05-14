@@ -4,6 +4,7 @@ import { AudioManager } from '../game/audio/AudioManager';
 import { ObjectivePanel } from './ObjectivePanel';
 import { UnitPanel } from './UnitPanel';
 import { EnemyTacticsDebug } from './EnemyTacticsDebug';
+import { CameraCompass } from './CameraCompass';
 import type { GameEngine } from '../game/GameEngine';
 
 interface Props {
@@ -62,6 +63,16 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
             }}
           >
             Normal
+          </button>
+          <button
+            disabled={!selectedCount || !engine}
+            onClick={() => {
+              AudioManager.play('click');
+              engine?.stopSelectedUnits();
+            }}
+            title="Cancel move orders for selected units (H)"
+          >
+            Stop (H)
           </button>
           <button
             disabled={!selectedId || !engine}
@@ -168,6 +179,7 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
 
       <UnitPanel engine={engine} />
       <EnemyTacticsDebug />
+      <CameraCompass />
     </>
   );
 };
