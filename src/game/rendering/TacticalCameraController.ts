@@ -24,8 +24,9 @@ import {
  *
  * Drag direction convention: middle-mouse drag pans the camera in the same
  * direction the cursor moves — i.e. "drag the world" feel: dragging the cursor
- * left moves the camera target left, revealing terrain on the left. This was
- * picked over the "grab the map" inversion because it matches how WASD pans.
+ * left moves the camera target left, revealing terrain on the left. WASD and
+ * arrow keys use the negated pan vector so W / up-arrow reads as "push the
+ * view forward" (RTS-typical), independent of edge-scroll tuning.
  */
 export class TacticalCameraController {
   private camera: ArcRotateCamera;
@@ -192,7 +193,12 @@ export class TacticalCameraController {
     if (this.keys.has('e')) this.desiredAlpha += TACTICAL_CAMERA_ROTATE_SPEED * dt;
     if (right === 0 && forward === 0) return;
     const speed = this.panSpeedScale();
-    this.panByWorldAxes(right * speed * dt, forward * speed * dt);
+    // Keyboard pan uses the opposite sign of edge-scroll / MMB drag for the
+    // same "screen-forward" intent: players expect W / up-arrow to move the
+    // view into the battlefield (camera target slides away from the camera),
+    // which required negating the basis combination that was tuned for pointer
+    // edge vectors first. Edge scroll and middle-mouse paths stay unchanged.
+    this.panByWorldAxes(-right * speed * dt, -forward * speed * dt);
   }
 
   private applyEdgeScroll(dt: number) {
