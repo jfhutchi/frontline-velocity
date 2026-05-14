@@ -202,3 +202,68 @@ Recommended next steps:
 Recommended commit message:
 `Overhaul desktop RTS controls and tactical camera for v0.0.3`
 
+---
+
+# v0.0.4 Content & Graphics Push
+
+## User request (verbatim)
+
+> add things like increase enemies throughout the level destructable buildings
+> better graphics for everything in the game. background music that would make
+> sense for world war 2 games. better graphics I mean give it like a style like
+> command & conquer but more HD polish. I want the ground textures to make
+> sense, UI to be intuative more dense cities more unit types and more
+> objectives if this causes levels to increase in size so be it.
+>
+> make sure to change the version number and display the version number on the
+> main menu each time you push.
+
+## What landed in v0.0.4
+
+Simulation / content:
+- New unit types `heavyTank` and `mortar` (templates, AI leash, vehicle
+  classification, UI labels, rendering).
+- Destructible buildings — `BuildingState` tracked in `SimulationState`,
+  damage via projectile direct hits and explosion splash, dynamic
+  pathing obstacles that drop when buildings collapse.
+- Mission overhaul (`operationCrossroads`): denser road network, more
+  buildings with `buildingStyle` variants (house, barn, factory, church,
+  bunker) and `destructible` flags, larger enemy garrison including
+  heavy tanks and mortars, expanded mission briefing.
+- Procedural ambient music (`AudioManager.startMusic`) — synthesized
+  WW2-flavor war drums + low brass drone, started when entering briefing
+  or play. No copyrighted audio is referenced or loaded.
+
+Rendering / visuals:
+- `TerrainRenderer.buildGroundMaterial` paints a procedural ground
+  texture (DynamicTexture) with grass tone variation, mud patches, and
+  cross-axis gravel streaks. Tiled across the map.
+- `buildBuilding` now renders distinct shapes for barns (pitched roof),
+  factories (smokestack), churches (steeple), bunkers (squat slab with
+  firing slits), and houses (default with chimney).
+- `syncBuildings` collapses destroyed buildings into rubble piles +
+  scattered debris each frame.
+- `UnitRenderer` cases for `heavyTank` (oversized tank silhouette) and
+  `mortar` (low square base + angled tube + ammo crates).
+
+UI / UX:
+- New `Minimap` component (top-down canvas) wired to a `MinimapSnapshot`
+  in the store. Shows friendly, enemy, building, rubble, and objective
+  blips, plus a camera-frustum hint. Click-to-pan moves the tactical
+  camera (`GameEngine.panTacticalCameraTo`).
+- `MainMenu` now shows the current `APP_VERSION` and a short version
+  label; `AppShell` reads the single-source `version.ts` constant for
+  the corner version label.
+- `MainMenu` About copy refreshed to describe the v0.0.4 build.
+
+Build / metadata:
+- `package.json` `version` bumped to `0.0.4`.
+- New `src/version.ts` so the version string lives in one place.
+
+## Validation
+
+- `npm run typecheck` — PASS
+- `npm run build` — PASS (Babylon chunk ~5.07 MB, isolated as a vendor
+  chunk; warning limit raised in v0.0.3).
+
+

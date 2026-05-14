@@ -1,5 +1,6 @@
 import {
   Color3,
+  DynamicTexture,
   MeshBuilder,
   Scene,
   ShadowGenerator,
@@ -9,13 +10,15 @@ import {
   type Mesh,
 } from '@babylonjs/core';
 import { COLOR } from '../constants';
-import type { MapDecoration, MissionDefinition, ObjectiveZone } from '../types';
+import type { BuildingState, MapDecoration, MissionDefinition, ObjectiveZone, SimulationState } from '../types';
 
 export class TerrainRenderer {
   private scene: Scene;
   private shadowGenerator?: ShadowGenerator;
   private meshes: Mesh[] = [];
   private objectiveRing?: Mesh;
+  /** Per-building visual roots so we can swap them to rubble on destruction. */
+  private buildingVisuals = new Map<string, { mesh: Mesh; rubble?: Mesh; destroyed: boolean }>();
 
   constructor(scene: Scene, shadowGenerator?: ShadowGenerator) {
     this.scene = scene;
@@ -25,10 +28,9 @@ export class TerrainRenderer {
   build(mission: MissionDefinition) {
     this.dispose();
     const size = mission.mapSize;
-    const ground = MeshBuilder.CreateGround('ground', { width: size, height: size, subdivisions: 48 }, this.scene);
+    const ground = MeshBuilder.CreateGround('ground', { width: size, height: size, subdivisions: 64 }, this.scene);
     this.addSubtleTerrainHeight(ground);
-    const gMat = this.material('groundMat', COLOR.ground);
-    gMat.diffuseColor = new Color3(0.3, 0.41, 0.27);
+    const gMat = this.buildGroundMaterial(size);
     ground.material = gMat;
     ground.position.y = 0;
     ground.receiveShadows = true;
@@ -36,10 +38,128 @@ export class TerrainRenderer {
 
     for (const d of mission.decorations) {
       const m = this.buildDecoration(d);
-      if (m) this.meshes.push(m);
+      if (m) {
+        this.meshes.push(m);
+        if (d.kind === 'building' && d.destructible) {
+          this.buildingVisuals.set(d.id, { mesh: m, destroyed: false });
+        }
+      }
     }
 
     this.objectiveRing = this.buildObjectiveRing(mission.objective);
+  }
+
+  /**
+   * Called each frame by the engine so the terrain renderer can react to
+   * structural HP changes — collapsed buildings get swapped to a low rubble
+   * mound so the visual matches the simulation/pathing state.
+   */
+  syncBuildings(state: SimulationState) {
+    for (const [id, vis] of this.buildingVisuals) {
+      if (vis.destroyed) continue;
+      const live = state.buildings.get(id) as BuildingState | undefined;
+      if (live && live.isDestroyed) {
+        this.collapseBuilding(id, vis, live);
+      }
+    }
+  }
+
+  private collapseBuilding(
+    id: string,
+    vis: { mesh: Mesh; rubble?: Mesh; destroyed: boolean },
+    live: BuildingState,
+  ) {
+    vis.destroyed = true;
+    vis.mesh.dispose(false, true);
+    const rubble = MeshBuilder.CreateBox(`rubble_${id}`, {
+      width: live.radius * 1.6,
+      height: 1.0,
+      depth: live.radius * 1.6,
+    }, this.scene);
+    rubble.position = new Vector3(live.position.x, 0.45, live.position.z);
+    rubble.rotation.y = Math.random() * 0.4;
+    rubble.scaling.y = 0.6;
+    rubble.material = this.material(`rubble_mat_${id}`, { r: 0.32, g: 0.28, b: 0.24 });
+    rubble.receiveShadows = true;
+    this.shadowGenerator?.addShadowCaster(rubble);
+    this.meshes.push(rubble);
+    vis.rubble = rubble;
+    for (let i = 0; i < 3; i += 1) {
+      const chunk = MeshBuilder.CreateBox(`rubble_chunk_${id}_${i}`, {
+        width: 0.7 + Math.random() * 0.6,
+        height: 0.5 + Math.random() * 0.4,
+        depth: 0.7 + Math.random() * 0.6,
+      }, this.scene);
+      chunk.position = new Vector3(
+        live.position.x + (Math.random() - 0.5) * live.radius * 1.2,
+        0.35,
+        live.position.z + (Math.random() - 0.5) * live.radius * 1.2,
+      );
+      chunk.rotation.y = Math.random() * Math.PI;
+      chunk.rotation.z = (Math.random() - 0.5) * 0.4;
+      chunk.material = this.material(`rubble_chunk_mat_${id}_${i}`, { r: 0.36, g: 0.32, b: 0.27 });
+      this.shadowGenerator?.addShadowCaster(chunk);
+      this.meshes.push(chunk);
+    }
+  }
+
+  /**
+   * Hand-painted dynamic texture for the ground: layered grass/dirt patches and
+   * gravel near roads. Avoids relying on any external asset while producing a
+   * less flat, more believable battlefield surface.
+   */
+  private buildGroundMaterial(size: number): StandardMaterial {
+    const tex = new DynamicTexture('groundDyn', { width: 1024, height: 1024 }, this.scene, true);
+    const ctx = tex.getContext() as CanvasRenderingContext2D;
+    // Base grass tone.
+    ctx.fillStyle = '#3c5230';
+    ctx.fillRect(0, 0, 1024, 1024);
+    // Scatter darker / lighter grass patches.
+    for (let i = 0; i < 1400; i += 1) {
+      const x = Math.random() * 1024;
+      const y = Math.random() * 1024;
+      const r = 18 + Math.random() * 70;
+      const tone = 0.55 + Math.random() * 0.45;
+      const r0 = Math.floor(40 + tone * 50);
+      const g0 = Math.floor(70 + tone * 60);
+      const b0 = Math.floor(32 + tone * 32);
+      ctx.fillStyle = `rgba(${r0},${g0},${b0},0.32)`;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Mud/dirt patches.
+    for (let i = 0; i < 220; i += 1) {
+      const x = Math.random() * 1024;
+      const y = Math.random() * 1024;
+      const r = 12 + Math.random() * 48;
+      ctx.fillStyle = `rgba(${80 + Math.random() * 26},${60 + Math.random() * 20},${40 + Math.random() * 16},0.42)`;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Gravel/dust streaks roughly along the central cross axes.
+    ctx.fillStyle = 'rgba(95,82,60,0.32)';
+    ctx.fillRect(490, 0, 44, 1024);
+    ctx.fillRect(0, 490, 1024, 44);
+    // Speckle noise so it doesn't look like flat colored ovals.
+    for (let i = 0; i < 6000; i += 1) {
+      const x = Math.random() * 1024;
+      const y = Math.random() * 1024;
+      const v = 30 + Math.random() * 60;
+      ctx.fillStyle = `rgba(${v},${v + 14},${v - 8},0.25)`;
+      ctx.fillRect(x, y, 1, 1);
+    }
+    tex.update();
+
+    const mat = new StandardMaterial('groundMat', this.scene);
+    const tile = Math.max(2, size / 80);
+    tex.uScale = tile;
+    tex.vScale = tile;
+    mat.diffuseTexture = tex;
+    mat.diffuseColor = new Color3(1, 1, 1);
+    mat.specularColor = new Color3(0.02, 0.02, 0.02);
+    return mat;
   }
 
   updateObjective(objective: ObjectiveZone) {
@@ -173,28 +293,108 @@ export class TerrainRenderer {
   }
 
   private buildBuilding(d: MapDecoration): Mesh {
+    const style = d.buildingStyle ?? 'house';
     const w = d.scale.x;
     const h = d.scale.y;
     const depth = d.scale.z;
+
+    let wallTint = colorVariant(COLOR.building, d.id, 0.06);
+    let roofTint = colorVariant(COLOR.buildingRoof, `${d.id}_roof`, 0.09);
+    if (style === 'barn') {
+      wallTint = colorVariant({ r: 0.45, g: 0.22, b: 0.18 }, d.id, 0.06);
+      roofTint = colorVariant({ r: 0.32, g: 0.18, b: 0.14 }, `${d.id}_roof`, 0.05);
+    } else if (style === 'factory') {
+      wallTint = colorVariant({ r: 0.42, g: 0.4, b: 0.36 }, d.id, 0.05);
+      roofTint = colorVariant({ r: 0.18, g: 0.18, b: 0.18 }, `${d.id}_roof`, 0.03);
+    } else if (style === 'church') {
+      wallTint = colorVariant({ r: 0.68, g: 0.62, b: 0.52 }, d.id, 0.04);
+      roofTint = colorVariant({ r: 0.28, g: 0.18, b: 0.13 }, `${d.id}_roof`, 0.04);
+    } else if (style === 'bunker') {
+      wallTint = colorVariant({ r: 0.36, g: 0.38, b: 0.32 }, d.id, 0.03);
+      roofTint = colorVariant({ r: 0.24, g: 0.26, b: 0.22 }, `${d.id}_roof`, 0.03);
+    }
+
     const wall = MeshBuilder.CreateBox(d.id, { width: w, height: h, depth }, this.scene);
-    wall.material = this.material(`${d.id}_wall`, colorVariant(COLOR.building, d.id, 0.06));
+    wall.material = this.material(`${d.id}_wall`, wallTint);
     wall.position = new Vector3(d.position.x, h / 2, d.position.z);
     wall.rotation.y = d.rotation;
     this.shadowCaster(wall);
 
-    const roof = MeshBuilder.CreateBox(`${d.id}_roof`, { width: w + 0.7, height: 0.55, depth: depth + 0.7 }, this.scene);
-    roof.material = this.material(`${d.id}_roofMat`, colorVariant(COLOR.buildingRoof, `${d.id}_roof`, 0.09));
-    roof.parent = wall;
-    roof.position = new Vector3(0, h / 2 + 0.28, 0);
-    this.shadowCaster(roof);
+    if (style === 'bunker') {
+      // Bunkers are squat, with a flat roof slab and slit windows.
+      const top = MeshBuilder.CreateBox(`${d.id}_top`, { width: w + 0.6, height: 0.6, depth: depth + 0.6 }, this.scene);
+      top.material = this.material(`${d.id}_topMat`, roofTint);
+      top.parent = wall;
+      top.position = new Vector3(0, h / 2 + 0.3, 0);
+      this.shadowCaster(top);
+      const slitMat = this.material(`${d.id}_slitMat`, { r: 0.06, g: 0.06, b: 0.04 });
+      slitMat.emissiveColor = new Color3(0.02, 0.02, 0.01);
+      for (const zSide of [-1, 1]) {
+        const slit = MeshBuilder.CreateBox(`${d.id}_slit_${zSide}`, { width: w * 0.6, height: 0.28, depth: 0.06 }, this.scene);
+        slit.material = slitMat;
+        slit.parent = wall;
+        slit.position = new Vector3(0, 0, zSide * (depth / 2 + 0.04));
+      }
+      return wall;
+    }
 
-    const door = MeshBuilder.CreateBox(`${d.id}_door`, { width: 1.2, height: 2.0, depth: 0.08 }, this.scene);
-    door.material = this.material(`${d.id}_doorMat`, { r: 0.2, g: 0.14, b: 0.09 });
-    door.parent = wall;
-    door.position = new Vector3(-w * 0.22, -h / 2 + 1.0, depth / 2 + 0.05);
+    if (style === 'barn') {
+      // Big pitched roof barn.
+      const roof = MeshBuilder.CreateCylinder(`${d.id}_roof`, {
+        diameter: Math.min(w, depth) * 1.15,
+        height: w + 0.6,
+        tessellation: 3,
+      }, this.scene);
+      roof.material = this.material(`${d.id}_roofMat`, roofTint);
+      roof.parent = wall;
+      roof.rotation.z = Math.PI / 2;
+      roof.rotation.y = Math.PI / 2;
+      roof.position = new Vector3(0, h / 2 + Math.min(w, depth) * 0.32, 0);
+      this.shadowCaster(roof);
+    } else if (style === 'church') {
+      const steeple = MeshBuilder.CreateCylinder(`${d.id}_steeple`, {
+        diameterTop: 0,
+        diameterBottom: 2.4,
+        height: h * 0.9,
+        tessellation: 6,
+      }, this.scene);
+      steeple.material = this.material(`${d.id}_steepleMat`, roofTint);
+      steeple.parent = wall;
+      steeple.position = new Vector3(w * 0.32, h / 2 + h * 0.45, 0);
+      this.shadowCaster(steeple);
+      const roof = MeshBuilder.CreateBox(`${d.id}_roof`, { width: w + 0.4, height: 0.4, depth: depth + 0.4 }, this.scene);
+      roof.material = this.material(`${d.id}_roofMat`, roofTint);
+      roof.parent = wall;
+      roof.position = new Vector3(0, h / 2 + 0.2, 0);
+      this.shadowCaster(roof);
+    } else if (style === 'factory') {
+      const roof = MeshBuilder.CreateBox(`${d.id}_roof`, { width: w + 0.3, height: 0.35, depth: depth + 0.3 }, this.scene);
+      roof.material = this.material(`${d.id}_roofMat`, roofTint);
+      roof.parent = wall;
+      roof.position = new Vector3(0, h / 2 + 0.17, 0);
+      this.shadowCaster(roof);
+      const stack = MeshBuilder.CreateCylinder(`${d.id}_stack`, { diameter: 0.9, height: h * 0.8, tessellation: 8 }, this.scene);
+      stack.material = this.material(`${d.id}_stackMat`, { r: 0.16, g: 0.14, b: 0.12 });
+      stack.parent = wall;
+      stack.position = new Vector3(w * 0.28, h / 2 + h * 0.4, depth * 0.18);
+      this.shadowCaster(stack);
+    } else {
+      const roof = MeshBuilder.CreateBox(`${d.id}_roof`, { width: w + 0.7, height: 0.55, depth: depth + 0.7 }, this.scene);
+      roof.material = this.material(`${d.id}_roofMat`, roofTint);
+      roof.parent = wall;
+      roof.position = new Vector3(0, h / 2 + 0.28, 0);
+      this.shadowCaster(roof);
+    }
+
+    if (style !== 'factory') {
+      const door = MeshBuilder.CreateBox(`${d.id}_door`, { width: 1.2, height: 2.0, depth: 0.08 }, this.scene);
+      door.material = this.material(`${d.id}_doorMat`, { r: 0.2, g: 0.14, b: 0.09 });
+      door.parent = wall;
+      door.position = new Vector3(-w * 0.22, -h / 2 + 1.0, depth / 2 + 0.05);
+    }
 
     const windowMat = this.material(`${d.id}_windowMat`, { r: 0.18, g: 0.22, b: 0.2 });
-    windowMat.emissiveColor = new Color3(0.04, 0.06, 0.04);
+    windowMat.emissiveColor = new Color3(0.05, 0.07, 0.05);
     for (const x of [-w * 0.28, w * 0.28]) {
       for (const zSide of [-1, 1]) {
         const win = MeshBuilder.CreateBox(`${d.id}_win_${x}_${zSide}`, { width: 1.05, height: 0.8, depth: 0.08 }, this.scene);
@@ -204,7 +404,7 @@ export class TerrainRenderer {
       }
     }
 
-    if (h > 4.5) {
+    if (h > 4.5 && (style === 'house' || style === 'factory')) {
       const chimney = MeshBuilder.CreateBox(`${d.id}_chimney`, { width: 0.7, height: 1.1, depth: 0.7 }, this.scene);
       chimney.material = this.material(`${d.id}_chimneyMat`, { r: 0.28, g: 0.2, b: 0.16 });
       chimney.parent = wall;
@@ -290,6 +490,7 @@ export class TerrainRenderer {
     }
     this.meshes = [];
     this.objectiveRing = undefined;
+    this.buildingVisuals.clear();
   }
 }
 

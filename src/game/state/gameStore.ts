@@ -33,6 +33,24 @@ export interface EventLogEntry {
   message: string;
 }
 
+export type MinimapBlipKind = 'friendly' | 'enemy' | 'building' | 'rubble';
+
+export interface MinimapBlip {
+  id: string;
+  kind: MinimapBlipKind;
+  x: number;
+  z: number;
+  selected?: boolean;
+  destroyed?: boolean;
+}
+
+export interface MinimapSnapshot {
+  mapSize: number;
+  blips: MinimapBlip[];
+  objective: { x: number; z: number; radius: number; controlPercent: number } | null;
+  cameraFocus: { x: number; z: number } | null;
+}
+
 export interface GameStoreState {
   screen: GameMode;
   paused: boolean;
@@ -61,6 +79,9 @@ export interface GameStoreState {
   /** Tactical camera yaw (alpha, radians) and zoom for HUD compass/zoom. */
   cameraYaw: number;
   cameraZoomFrac: number;
+
+  /** Snapshot of map blips for the tactical minimap. Updated each publish tick. */
+  minimap: MinimapSnapshot | null;
 
   /** Optional enemy AI debug snapshot pushed by the simulation each tick. */
   enemyDebug: SquadDebugSnapshot[];
@@ -99,6 +120,7 @@ export interface GameStoreState {
   setResult: (r: 'victory' | 'defeat') => void;
   flashDamage: () => void;
   setCameraStatus: (yaw: number, zoomFrac: number) => void;
+  setMinimap: (snapshot: MinimapSnapshot | null) => void;
   setEnemyDebug: (snaps: SquadDebugSnapshot[]) => void;
   toggleEnemyDebug: () => void;
   setShowEnemyDebug: (v: boolean) => void;
@@ -123,6 +145,7 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
   damageFlashTick: 0,
   cameraYaw: 0,
   cameraZoomFrac: 0.5,
+  minimap: null,
   enemyDebug: [],
   showEnemyDebug: false,
 
@@ -288,6 +311,8 @@ export const useGameStore = create<GameStoreState>((set, get) => ({
     if (Math.abs(prevYaw - yaw) < 0.005 && Math.abs(prevZoom - zoomFrac) < 0.005) return;
     set({ cameraYaw: yaw, cameraZoomFrac: zoomFrac });
   },
+
+  setMinimap: (snapshot) => set({ minimap: snapshot }),
 
   setEnemyDebug: (snaps) => set({ enemyDebug: snaps }),
   toggleEnemyDebug: () => set({ showEnemyDebug: !get().showEnemyDebug }),

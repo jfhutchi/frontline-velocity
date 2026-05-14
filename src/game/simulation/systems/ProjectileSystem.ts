@@ -1,6 +1,7 @@
 import { MAP_HALF, PROJECTILE_HIT_RADIUS, SPLASH_BASE_RADIUS } from '../../constants';
 import type { Projectile, SimulationState, Unit } from '../../types';
-import { segmentHitsBuilding } from './PathfindingSystem';
+import { findBuildingHitByRay } from './PathfindingSystem';
+import { applyBuildingDamage, applyBuildingSplash } from './BuildingSystem';
 
 export interface DamageEvent {
   targetId: string;
@@ -40,7 +41,15 @@ export function updateProjectiles(
       continue; // off map, drop
     }
 
-    if (segmentHitsBuilding(state, previous, p.position, 0.45)) {
+    const buildingHitId = findBuildingHitByRay(state, previous, p.position, 0.45);
+    if (buildingHitId) {
+      // Direct shell impact on a wall: apply structural damage. Tank cannons
+      // chip through walls; mortar/AT shells with splash radius do area damage
+      // to any other walls right next to the impact too.
+      applyBuildingDamage(state, buildingHitId, p.damage * 0.55, p.ownerId);
+      if (p.splashRadius && p.splashRadius > 0.01) {
+        applyBuildingSplash(state, p.position, p.splashRadius, p.damage * 0.35, p.ownerId);
+      }
       state.effects.push({
         id: `wallhit_${p.id}`,
         kind: 'hit',
@@ -105,6 +114,8 @@ export function updateProjectiles(
       });
 
       if (p.splashRadius && p.splashRadius > 0) {
+        // Splash also blasts any nearby destructible buildings.
+        applyBuildingSplash(state, p.position, p.splashRadius, p.damage * 0.45, p.ownerId);
         for (const u of state.units.values()) {
           if (u.id === hit.id) continue;
           if (u.isDestroyed) continue;

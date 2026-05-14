@@ -95,6 +95,30 @@ button.danger {
   z-index: 9999;
 }
 
+.menu-version {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 4px 0 18px;
+  font-family: var(--font-mono);
+}
+.menu-version-tag {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  padding: 2px 8px;
+  border: 1px solid rgba(106, 191, 105, 0.55);
+  border-radius: 2px;
+  background: rgba(20, 36, 26, 0.55);
+}
+.menu-version-label {
+  font-size: 11px;
+  color: var(--fg-1);
+  letter-spacing: 0.04em;
+}
+
 /* ---------- Menu / Briefing ---------- */
 
 .menu-screen,
@@ -655,6 +679,58 @@ button.danger {
 .enemy-debug-fsm {
   color: var(--accent-warm);
 }
+
+.minimap {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  width: 208px;
+  padding: 8px 10px 10px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  color: var(--fg-1);
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: var(--hud-shadow);
+  z-index: 50;
+}
+.minimap-title {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  text-transform: uppercase;
+}
+.minimap canvas {
+  width: 188px;
+  height: 188px;
+  display: block;
+  border: 1px solid rgba(120, 160, 110, 0.4);
+  border-radius: 2px;
+  background: #1a2316;
+  cursor: crosshair;
+}
+.minimap-legend {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 10px;
+  color: var(--fg-2);
+}
+.minimap-legend .dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+.minimap-legend .dot.friendly { background: #6abf69; }
+.minimap-legend .dot.enemy { background: #d24a4a; }
+.minimap-legend .dot.objective { background: #ffd54f; }
 
 .camera-compass {
   position: absolute;
