@@ -60,6 +60,7 @@ export class GameEngine {
   private projectileSoundCooldown = 0;
   private lastEffectCount = 0;
   private resizeObserver: ResizeObserver | null = null;
+  private resizeFrame = 0;
 
   constructor(canvas: HTMLCanvasElement, callbacks: GameEngineCallbacks = {}) {
     this.canvas = canvas;
@@ -101,6 +102,8 @@ export class GameEngine {
 
     this.ctx.engine.runRenderLoop(this.frame);
     window.addEventListener('resize', this.handleResize);
+    window.addEventListener('orientationchange', this.handleResize);
+    window.visualViewport?.addEventListener('resize', this.handleResize);
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(() => this.ctx.engine.resize());
       this.resizeObserver.observe(canvas);
@@ -120,6 +123,9 @@ export class GameEngine {
     if (window.render_game_to_text === this.renderGameToText) window.render_game_to_text = undefined;
     if (window.advanceTime === this.advanceTime) window.advanceTime = undefined;
     window.removeEventListener('resize', this.handleResize);
+    window.removeEventListener('orientationchange', this.handleResize);
+    window.visualViewport?.removeEventListener('resize', this.handleResize);
+    if (this.resizeFrame) window.cancelAnimationFrame(this.resizeFrame);
     this.resizeObserver?.disconnect();
     this.unitRenderer.dispose();
     this.effectsRenderer.dispose();
@@ -143,7 +149,12 @@ export class GameEngine {
   }
 
   private handleResize = () => {
-    this.ctx.engine.resize();
+    if (this.resizeFrame) window.cancelAnimationFrame(this.resizeFrame);
+    this.resizeFrame = window.requestAnimationFrame(() => {
+      this.resizeFrame = 0;
+      this.ctx.engine.resize();
+    });
+    window.setTimeout(() => this.ctx.engine.resize(), 160);
   };
 
   private frame = () => {
@@ -198,7 +209,7 @@ export class GameEngine {
           // keep playing with surviving units.
           useGameStore.getState().exitDirectControl();
         } else {
-          this.cameraController.trackChase(unit);
+          this.cameraController.trackChase(unit, rawDt);
         }
       }
     }
@@ -446,6 +457,10 @@ export class GameEngine {
     this.directInput.setTouch(forward, turn, fire);
   }
 
+  setTacticalTouchCamera(right: number, forward: number, rotate: number, zoom: number) {
+    this.cameraController.setTacticalVirtualControls(right, forward, rotate, zoom);
+  }
+
   /** Used by HUD buttons — centers on the primary selected unit. */
   centerCameraOnSelected() {
     const ids = useGameStore.getState().selectedUnitIds;
@@ -554,6 +569,12 @@ export class GameEngine {
         heldSeconds: Number(state.objective.heldSeconds.toFixed(1)),
         contested: state.objective.contested,
         captured: state.objective.captured,
+      },
+      camera: {
+        x: Number(this.ctx.camera.target.x.toFixed(1)),
+        z: Number(this.ctx.camera.target.z.toFixed(1)),
+        yaw: Number(this.cameraController.getTactical().getYaw().toFixed(3)),
+        zoomFrac: Number(store.cameraZoomFrac.toFixed(2)),
       },
       units,
       events: state.eventLog.map((event: BattlefieldEvent) => event.message),

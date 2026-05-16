@@ -37,6 +37,8 @@ export class TacticalCameraController {
   private keys = new Set<string>();
   /** Pending edge-scroll input applied each tick. -1..1 in each axis. */
   private edgePan = { right: 0, forward: 0 };
+  /** Touch/gamepad-style camera intent supplied by mobile HUD controls. */
+  private virtualControls = { right: 0, forward: 0, rotate: 0, zoom: 0 };
 
   constructor(camera: ArcRotateCamera) {
     this.camera = camera;
@@ -64,6 +66,10 @@ export class TacticalCameraController {
     this.keys.clear();
     this.edgePan.right = 0;
     this.edgePan.forward = 0;
+    this.virtualControls.right = 0;
+    this.virtualControls.forward = 0;
+    this.virtualControls.rotate = 0;
+    this.virtualControls.zoom = 0;
   }
 
   /** R / Home — frame-snap back to the default tactical overview. */
@@ -144,11 +150,20 @@ export class TacticalCameraController {
     this.edgePan.forward = clamp(forward, -1, 1);
   }
 
+  /** Continuous camera input from touch UI controls. Positive zoom means zoom in. */
+  setVirtualControls(right: number, forward: number, rotate: number, zoom: number) {
+    this.virtualControls.right = clamp(right, -1, 1);
+    this.virtualControls.forward = clamp(forward, -1, 1);
+    this.virtualControls.rotate = clamp(rotate, -1, 1);
+    this.virtualControls.zoom = clamp(zoom, -1, 1);
+  }
+
   /** Frame update — must be called every frame the tactical camera is active. */
   update(dt: number) {
     if (dt <= 0) return;
     this.applyKeyboardPan(dt);
     this.applyEdgeScroll(dt);
+    this.applyVirtualControls(dt);
     this.clampDesired();
 
     const panT = 1 - Math.exp(-TACTICAL_CAMERA_PAN_SMOOTHING * dt);
@@ -205,6 +220,20 @@ export class TacticalCameraController {
     if (this.edgePan.right === 0 && this.edgePan.forward === 0) return;
     const speed = TACTICAL_EDGE_SCROLL_SPEED * (this.desiredRadius / TACTICAL_CAMERA_DEFAULT.radius);
     this.panByWorldAxes(this.edgePan.right * speed * dt, this.edgePan.forward * speed * dt);
+  }
+
+  private applyVirtualControls(dt: number) {
+    const { right, forward, rotate, zoom } = this.virtualControls;
+    if (right !== 0 || forward !== 0) {
+      const speed = TACTICAL_CAMERA_PAN_SPEED * 1.25 * (this.desiredRadius / TACTICAL_CAMERA_DEFAULT.radius);
+      this.panByWorldAxes(right * speed * dt, forward * speed * dt);
+    }
+    if (rotate !== 0) {
+      this.desiredAlpha += rotate * TACTICAL_CAMERA_ROTATE_SPEED * 0.9 * dt;
+    }
+    if (zoom !== 0) {
+      this.zoom(-zoom * TACTICAL_ZOOM_WHEEL_STEP * 3.2 * dt);
+    }
   }
 
   private panSpeedScale(): number {

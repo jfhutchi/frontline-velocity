@@ -15,6 +15,7 @@ export const MAX_FRAME_DT = 0.1;
 export const SPEED_LEVELS = {
   slow: 0.35,
   normal: 1,
+  fast: 1.75,
 } as const;
 
 export type SpeedLevel = keyof typeof SPEED_LEVELS;
@@ -79,24 +80,24 @@ export const DC_MAX_REVERSE_SPEED = 5;
 
 // Visual / colors used by the renderer.
 export const COLOR = {
-  friendlyHull: { r: 0.35, g: 0.55, b: 0.85 },
-  friendlyTurret: { r: 0.45, g: 0.65, b: 0.95 },
-  friendlyMarker: { r: 0.4, g: 0.6, b: 1.0 },
+  friendlyHull: { r: 0.22, g: 0.34, b: 0.39 },
+  friendlyTurret: { r: 0.38, g: 0.49, b: 0.47 },
+  friendlyMarker: { r: 0.32, g: 0.5, b: 0.68 },
 
-  enemyHull: { r: 0.7, g: 0.2, b: 0.2 },
-  enemyTurret: { r: 0.85, g: 0.3, b: 0.3 },
-  enemyMarker: { r: 0.95, g: 0.3, b: 0.3 },
+  enemyHull: { r: 0.5, g: 0.16, b: 0.12 },
+  enemyTurret: { r: 0.66, g: 0.22, b: 0.16 },
+  enemyMarker: { r: 0.86, g: 0.28, b: 0.22 },
 
   ground: { r: 0.32, g: 0.42, b: 0.28 },
   road: { r: 0.28, g: 0.27, b: 0.24 },
   building: { r: 0.55, g: 0.5, b: 0.42 },
   buildingRoof: { r: 0.4, g: 0.27, b: 0.22 },
   treeTrunk: { r: 0.32, g: 0.22, b: 0.14 },
-  treePine: { r: 0.18, g: 0.36, b: 0.22 },
-  treeOak: { r: 0.28, g: 0.46, b: 0.28 },
-  shrub: { r: 0.22, g: 0.38, b: 0.16 },
+  treePine: { r: 0.13, g: 0.31, b: 0.19 },
+  treeOak: { r: 0.22, g: 0.39, b: 0.24 },
+  shrub: { r: 0.18, g: 0.32, b: 0.13 },
   hill: { r: 0.28, g: 0.36, b: 0.24 },
-  fieldPatch: { r: 0.42, g: 0.46, b: 0.24 },
+  fieldPatch: { r: 0.36, g: 0.4, b: 0.19 },
   dirt: { r: 0.36, g: 0.29, b: 0.2 },
   roadShoulder: { r: 0.3, g: 0.25, b: 0.18 },
   sandbag: { r: 0.54, g: 0.48, b: 0.34 },

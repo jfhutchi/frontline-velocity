@@ -313,6 +313,13 @@ export class UnitRenderer {
 
   update(unit: Unit, isSelected: boolean, isControlled: boolean, target: Unit | null, simTime: number, isHovered = false) {
     const vis = this.ensureVisual(unit);
+    vis.root.setEnabled(!isControlled);
+    vis.destinationMarker.setEnabled(!isControlled);
+    if (isControlled) {
+      vis.attackLine?.dispose();
+      vis.attackLine = undefined;
+      return;
+    }
 
     vis.root.position.x = unit.position.x;
     vis.root.position.z = unit.position.z;

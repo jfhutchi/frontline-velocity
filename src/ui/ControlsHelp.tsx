@@ -38,7 +38,7 @@ const DC_ROWS: Array<[string, string]> = [
 ];
 
 export const ControlsHelp: React.FC<Props> = ({ mode }) => {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   if (mode !== 'tactical' && mode !== 'directControl') return null;
   const rows = mode === 'tactical' ? TACTICAL_ROWS : DC_ROWS;
@@ -75,8 +75,7 @@ export const ControlsHelp: React.FC<Props> = ({ mode }) => {
           </table>
           {mode === 'tactical' && (
             <div className="controls-help-footnote">
-              Mobile: touch still works but is not optimized this version.
-              Double-click &ldquo;select all same type&rdquo; is future work.
+              Touch: drag battlefield to pan, pinch to zoom, tap unit / ground to command.
             </div>
           )}
         </>

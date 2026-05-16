@@ -39,6 +39,7 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
         <ObjectivePanel />
         <div className="tactical-controls">
           <button
+            className="command-pause"
             onClick={() => {
               AudioManager.play('click');
               if (paused) resume();
@@ -48,7 +49,7 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
             {paused ? 'Resume' : 'Pause'}
           </button>
           <button
-            className={speedLevel === 'slow' ? 'primary' : ''}
+            className={`command-speed${speedLevel === 'slow' ? ' primary' : ''}`}
             onClick={() => {
               AudioManager.play('click');
               setSpeed('slow');
@@ -57,7 +58,7 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
             Slow
           </button>
           <button
-            className={speedLevel === 'normal' ? 'primary' : ''}
+            className={`command-speed${speedLevel === 'normal' ? ' primary' : ''}`}
             onClick={() => {
               AudioManager.play('click');
               setSpeed('normal');
@@ -66,6 +67,16 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
             Normal
           </button>
           <button
+            className={`command-speed${speedLevel === 'fast' ? ' primary' : ''}`}
+            onClick={() => {
+              AudioManager.play('click');
+              setSpeed('fast');
+            }}
+          >
+            Fast
+          </button>
+          <button
+            className="command-selected"
             disabled={!selectedCount || !engine}
             onClick={() => {
               AudioManager.play('click');
@@ -76,25 +87,27 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
             Stop (H)
           </button>
           <button
+            className="command-selected"
             disabled={!selectedId || !engine}
             onClick={() => {
               AudioManager.play('click');
               engine?.jumpIntoSelected();
             }}
           >
-            Jump Into Selected
+            Jump In
           </button>
           <button
+            className="command-camera"
             disabled={!engine}
             onClick={() => {
               AudioManager.play('click');
               engine?.resetTacticalCamera();
             }}
           >
-            Reset Camera
+            Reset Cam
           </button>
           <button
-            className={showEnemyDebug ? 'primary' : ''}
+            className={`command-debug${showEnemyDebug ? ' primary' : ''}`}
             onClick={() => {
               AudioManager.play('click');
               toggleEnemyDebug();
@@ -104,7 +117,7 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
             AI Debug
           </button>
           <button
-            className="danger"
+            className="danger command-menu"
             onClick={() => {
               if (window.confirm('Abort the mission and return to the main menu?')) {
                 AudioManager.play('click');

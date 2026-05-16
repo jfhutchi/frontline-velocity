@@ -36,7 +36,7 @@ export const EnemyTacticsDebug: React.FC = () => {
                 {snap.planActionIds.length === 0
                   ? 'fallback / defensive hold'
                   : snap.planActionIds
-                      .map((id, idx) => (id === snap.currentActionId ? `▶${id}` : id))
+                      .map((id) => (id === snap.currentActionId ? `▶${id}` : id))
                       .join(' → ')}
               </span>
             </div>

@@ -18,6 +18,8 @@ export class CameraController {
   private mode: CameraMode = 'tactical';
   private shakeSeconds = 0;
   private shakeStrength = 0;
+  private chasePosition: Vector3 | null = null;
+  private chaseTarget: Vector3 | null = null;
 
   constructor(scene: Scene, tacticalCam: ArcRotateCamera, _canvas: HTMLCanvasElement) {
     this.scene = scene;
@@ -30,14 +32,15 @@ export class CameraController {
       /* no-op */
     }
     this.tactical = new TacticalCameraController(tacticalCam);
-    this.chaseCam = new FollowCamera('chaseCam', new Vector3(0, 6, -10), scene);
-    this.chaseCam.radius = 12;
-    this.chaseCam.heightOffset = 6;
+    this.chaseCam = new FollowCamera('directFirstPersonCam', new Vector3(0, 2, -2), scene);
+    this.chaseCam.radius = 2;
+    this.chaseCam.heightOffset = 2;
     this.chaseCam.rotationOffset = 180;
-    this.chaseCam.cameraAcceleration = 0.08;
+    this.chaseCam.cameraAcceleration = 0.18;
     this.chaseCam.maxCameraSpeed = 180;
-    this.chaseCam.minZ = 0.5;
+    this.chaseCam.minZ = 0.08;
     this.chaseCam.maxZ = 600;
+    this.chaseCam.fov = 1.02;
     this.tactical.reset(true);
     this.activate('tactical');
   }
@@ -56,9 +59,12 @@ export class CameraController {
   }
 
   activate(mode: CameraMode) {
+    const switchingMode = this.mode !== mode;
     this.mode = mode;
     if (mode === 'tactical') {
       this.scene.activeCamera = this.tacticalCam;
+      this.chasePosition = null;
+      this.chaseTarget = null;
       try {
         this.chaseCam.detachControl();
       } catch {
@@ -70,6 +76,10 @@ export class CameraController {
         this.tacticalCam.detachControl();
       } catch {
         /* no-op */
+      }
+      if (switchingMode) {
+        this.chasePosition = null;
+        this.chaseTarget = null;
       }
       this.tactical.clearKeys();
     }
@@ -86,18 +96,36 @@ export class CameraController {
     }
   }
 
-  /** Place chase camera behind the unit, looking forward over its turret. */
-  trackChase(unit: Unit) {
+  /** Place the active camera at the selected unit's gunner/driver eye-line. */
+  trackChase(unit: Unit, dt = 1 / 60) {
     if (this.mode !== 'directControl') return;
-    const sin = Math.sin(unit.rotation);
-    const cos = Math.cos(unit.rotation);
-    const back = 9.5;
-    const up = 5.2;
+    const yaw = unit.rotation + unit.turretRotation * 0.32;
+    const sin = Math.sin(yaw);
+    const cos = Math.cos(yaw);
+    const eyeHeight =
+      unit.type === 'reconJeep' ? 1.8 :
+      unit.type === 'infantry' ? 1.7 :
+      2.75;
+    const forwardOffset =
+      unit.type === 'reconJeep' ? 0.95 :
+      unit.type === 'infantry' ? 0.25 :
+      unit.radius * 0.62;
     const shake = this.consumeShake();
-    const camX = unit.position.x - sin * back + shake.x;
-    const camZ = unit.position.z - cos * back + shake.z;
-    this.chaseCam.position.set(camX, up + shake.y, camZ);
-    this.chaseCam.setTarget(new Vector3(unit.position.x + sin * 5, unit.position.y + 1.5, unit.position.z + cos * 5));
+    const desiredPosition = new Vector3(
+      unit.position.x + sin * forwardOffset + shake.x,
+      eyeHeight + shake.y,
+      unit.position.z + cos * forwardOffset + shake.z,
+    );
+    const desiredTarget = new Vector3(
+      unit.position.x + sin * 90,
+      eyeHeight - 0.12,
+      unit.position.z + cos * 90,
+    );
+    const t = 1 - Math.exp(-Math.max(dt, 1 / 120) * 20);
+    this.chasePosition = this.chasePosition ? Vector3.Lerp(this.chasePosition, desiredPosition, t) : desiredPosition;
+    this.chaseTarget = this.chaseTarget ? Vector3.Lerp(this.chaseTarget, desiredTarget, t) : desiredTarget;
+    this.chaseCam.position.copyFrom(this.chasePosition);
+    this.chaseCam.setTarget(this.chaseTarget);
   }
 
   /** Tactical-camera convenience methods exposed for HUD buttons. */
@@ -115,6 +143,10 @@ export class CameraController {
 
   zoomTactical(delta: number) {
     this.tactical.zoom(delta);
+  }
+
+  setTacticalVirtualControls(right: number, forward: number, rotate: number, zoom: number) {
+    this.tactical.setVirtualControls(right, forward, rotate, zoom);
   }
 
   addRecoilShake(strength = 0.22) {
