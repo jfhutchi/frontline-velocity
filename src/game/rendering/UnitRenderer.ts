@@ -3,9 +3,9 @@ import {
   DynamicTexture,
   LinesMesh,
   MeshBuilder,
+  PBRMaterial,
   Scene,
   ShadowGenerator,
-  StandardMaterial,
   TransformNode,
   Vector3,
   type Mesh,
@@ -41,7 +41,7 @@ export class UnitRenderer {
   private scene: Scene;
   private shadowGenerator?: ShadowGenerator;
   private visuals = new Map<string, UnitVisual>();
-  private materials: Record<string, StandardMaterial> = {};
+  private materials: Record<string, PBRMaterial> = {};
 
   constructor(scene: Scene, shadowGenerator?: ShadowGenerator) {
     this.scene = scene;
@@ -50,54 +50,63 @@ export class UnitRenderer {
   }
 
   private buildSharedMaterials() {
-    const mk = (name: string, c: { r: number; g: number; b: number }) => {
-      const m = new StandardMaterial(name, this.scene);
-      m.diffuseColor = new Color3(c.r, c.g, c.b);
-      m.specularColor = new Color3(0.08, 0.08, 0.07);
+    const mk = (name: string, c: { r: number; g: number; b: number }, metallic = 0.0, roughness = 0.88) => {
+      const m = new PBRMaterial(name, this.scene);
+      m.albedoColor = new Color3(c.r, c.g, c.b);
+      m.metallic = metallic;
+      m.roughness = roughness;
       this.materials[name] = m;
       return m;
     };
-    mk('friendlyHull', COLOR.friendlyHull);
-    mk('friendlyTurret', COLOR.friendlyTurret);
-    const friendlyMarker = mk('friendlyMarker', COLOR.friendlyMarker);
+    // Painted olive-drab / dark-grey hull plate
+    mk('friendlyHull', COLOR.friendlyHull, 0.45, 0.82);
+    mk('friendlyTurret', COLOR.friendlyTurret, 0.45, 0.78);
+    const friendlyMarker = mk('friendlyMarker', COLOR.friendlyMarker, 0, 0.95);
     friendlyMarker.alpha = 0.28;
-    mk('enemyHull', COLOR.enemyHull);
-    mk('enemyTurret', COLOR.enemyTurret);
-    const enemyMarker = mk('enemyMarker', COLOR.enemyMarker);
+    mk('enemyHull', COLOR.enemyHull, 0.45, 0.82);
+    mk('enemyTurret', COLOR.enemyTurret, 0.45, 0.78);
+    const enemyMarker = mk('enemyMarker', COLOR.enemyMarker, 0, 0.95);
     enemyMarker.alpha = 0.22;
-    mk('track', { r: 0.08, g: 0.08, b: 0.075 });
-    mk('rubber', { r: 0.045, g: 0.045, b: 0.045 });
-    mk('glass', { r: 0.28, g: 0.42, b: 0.46 });
-    mk('gunMetal', { r: 0.18, g: 0.18, b: 0.17 });
-    mk('soldier', { r: 0.22, g: 0.32, b: 0.19 });
-    mk('stowageCanvas', { r: 0.37, g: 0.33, b: 0.22 });
-    mk('deckDetail', { r: 0.1, g: 0.105, b: 0.085 });
-    mk('edgeHighlight', { r: 0.43, g: 0.46, b: 0.3 });
-    mk('wreck', { r: 0.17, g: 0.15, b: 0.13 });
+    // Rubber tracks and road-wheels
+    mk('track', { r: 0.08, g: 0.08, b: 0.075 }, 0.05, 0.96);
+    mk('rubber', { r: 0.045, g: 0.045, b: 0.045 }, 0, 0.98);
+    // Shiny vehicle glass
+    mk('glass', { r: 0.28, g: 0.42, b: 0.46 }, 0, 0.08);
+    // Polished gun barrels
+    mk('gunMetal', { r: 0.18, g: 0.18, b: 0.17 }, 0.78, 0.32);
+    // Fabric and canvas
+    mk('soldier', { r: 0.22, g: 0.32, b: 0.19 }, 0, 0.92);
+    mk('stowageCanvas', { r: 0.37, g: 0.33, b: 0.22 }, 0, 0.92);
+    // Engine deck pressed-metal details
+    mk('deckDetail', { r: 0.1, g: 0.105, b: 0.085 }, 0.62, 0.55);
+    mk('edgeHighlight', { r: 0.43, g: 0.46, b: 0.3 }, 0.2, 0.80);
+    // Oxidised wreck hull
+    mk('wreck', { r: 0.17, g: 0.15, b: 0.13 }, 0.3, 0.92);
     this.materials.insignia = this.buildInsigniaMaterial();
-    const sel = mk('selectionRing', COLOR.selection);
+    // UI overlays — emissive-driven, no real PBR lighting needed
+    const sel = mk('selectionRing', COLOR.selection, 0, 0.95);
     sel.emissiveColor = new Color3(0.3, 0.7, 0.3);
     sel.alpha = 0.85;
-    const hover = mk('hoverRing', { r: 0.85, g: 0.95, b: 0.55 });
+    const hover = mk('hoverRing', { r: 0.85, g: 0.95, b: 0.55 }, 0, 0.95);
     hover.emissiveColor = new Color3(0.55, 0.7, 0.25);
     hover.alpha = 0.55;
-    const threat = mk('threatRing', { r: 1, g: 0.34, b: 0.22 });
+    const threat = mk('threatRing', { r: 1, g: 0.34, b: 0.22 }, 0, 0.95);
     threat.emissiveColor = new Color3(0.8, 0.18, 0.08);
     threat.alpha = 0.7;
-    const dest = mk('destination', { r: 0.95, g: 0.78, b: 0.28 });
+    const dest = mk('destination', { r: 0.95, g: 0.78, b: 0.28 }, 0, 0.95);
     dest.emissiveColor = new Color3(0.6, 0.42, 0.12);
     dest.alpha = 0.78;
     // Health-bar background: opaque dark plate that the colored fill sits inside.
-    const hpBg = mk('hpBg', { r: 0.04, g: 0.04, b: 0.04 });
+    const hpBg = mk('hpBg', { r: 0.04, g: 0.04, b: 0.04 }, 0, 1.0);
     hpBg.alpha = 0.92;
     hpBg.emissiveColor = new Color3(0.04, 0.04, 0.04);
-    const hpFill = mk('hpFill', { r: 0.4, g: 0.85, b: 0.4 });
+    const hpFill = mk('hpFill', { r: 0.4, g: 0.85, b: 0.4 }, 0, 1.0);
     hpFill.emissiveColor = new Color3(0.3, 0.7, 0.3);
-    const hpLow = mk('hpLow', { r: 0.92, g: 0.25, b: 0.22 });
+    const hpLow = mk('hpLow', { r: 0.92, g: 0.25, b: 0.22 }, 0, 1.0);
     hpLow.emissiveColor = new Color3(0.65, 0.08, 0.06);
   }
 
-  private buildInsigniaMaterial(): StandardMaterial {
+  private buildInsigniaMaterial(): PBRMaterial {
     const tex = new DynamicTexture('tank_insignia_star', { width: 128, height: 128 }, this.scene, true);
     const ctx = tex.getContext() as CanvasRenderingContext2D;
     ctx.clearRect(0, 0, 128, 128);
@@ -115,13 +124,15 @@ export class UnitRenderer {
     ctx.fill();
     tex.update();
     tex.hasAlpha = true;
-    const mat = new StandardMaterial('tankInsigniaMat', this.scene);
-    mat.diffuseTexture = tex;
+    const mat = new PBRMaterial('tankInsigniaMat', this.scene);
+    mat.albedoTexture = tex;
     mat.opacityTexture = tex;
     mat.emissiveTexture = tex;
     mat.emissiveColor = new Color3(0.18, 0.18, 0.15);
-    mat.specularColor = Color3.Black();
-    mat.useAlphaFromDiffuseTexture = true;
+    mat.metallic = 0;
+    mat.roughness = 0.85;
+    mat.useAlphaFromAlbedoTexture = true;
+    mat.transparencyMode = PBRMaterial.PBRMATERIAL_ALPHABLEND;
     mat.backFaceCulling = false;
     return mat;
   }
@@ -517,7 +528,7 @@ export class UnitRenderer {
     vis.attackLine.color = unit.faction === 'friendly' ? new Color3(0.55, 0.8, 1) : new Color3(1, 0.45, 0.28);
   }
 
-  private mesh(name: string, mesh: Mesh, material: StandardMaterial, parent: TransformNode): Mesh {
+  private mesh(name: string, mesh: Mesh, material: PBRMaterial, parent: TransformNode): Mesh {
     mesh.name = name;
     mesh.material = material;
     mesh.parent = parent;
