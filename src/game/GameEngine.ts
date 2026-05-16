@@ -104,6 +104,9 @@ export class GameEngine {
     window.addEventListener('resize', this.handleResize);
     window.addEventListener('orientationchange', this.handleResize);
     window.visualViewport?.addEventListener('resize', this.handleResize);
+    document.addEventListener('visibilitychange', this.onDocVisibility);
+    window.addEventListener('blur', this.onWindowBlur);
+    window.addEventListener('focus', this.onWindowFocus);
     if (typeof ResizeObserver !== 'undefined') {
       this.resizeObserver = new ResizeObserver(() => this.ctx.engine.resize());
       this.resizeObserver.observe(canvas);
@@ -125,6 +128,9 @@ export class GameEngine {
     window.removeEventListener('resize', this.handleResize);
     window.removeEventListener('orientationchange', this.handleResize);
     window.visualViewport?.removeEventListener('resize', this.handleResize);
+    document.removeEventListener('visibilitychange', this.onDocVisibility);
+    window.removeEventListener('blur', this.onWindowBlur);
+    window.removeEventListener('focus', this.onWindowFocus);
     if (this.resizeFrame) window.cancelAnimationFrame(this.resizeFrame);
     this.resizeObserver?.disconnect();
     this.unitRenderer.dispose();
@@ -147,6 +153,22 @@ export class GameEngine {
     this.cameraController.resetTacticalCamera(true);
     this.publishSummaries(true);
   }
+
+  private onDocVisibility = () => {
+    if (document.visibilityState === 'hidden') {
+      AudioManager.suspend();
+    } else {
+      AudioManager.resume();
+    }
+  };
+
+  private onWindowBlur = () => {
+    AudioManager.suspend();
+  };
+
+  private onWindowFocus = () => {
+    AudioManager.resume();
+  };
 
   private handleResize = () => {
     if (this.resizeFrame) window.cancelAnimationFrame(this.resizeFrame);

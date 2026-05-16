@@ -74,6 +74,8 @@ export class TacticalInputController {
   } | null = null;
   /** Suppress next click if a touch gesture took place. */
   private suppressNextTapUntil = 0;
+  /** Long-press timer for touch attack orders. */
+  private longPressTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     scene: Scene,
@@ -121,6 +123,7 @@ export class TacticalInputController {
   detach() {
     if (!this.bound) return;
     this.bound = false;
+    this.clearLongPress();
     this.canvas.removeEventListener('contextmenu', this.onContextMenu);
     this.canvas.removeEventListener('pointerdown', this.onPointerDown);
     this.canvas.removeEventListener('pointermove', this.onPointerMove);
@@ -163,6 +166,13 @@ export class TacticalInputController {
 
   // ----- helpers -----
 
+  private clearLongPress() {
+    if (this.longPressTimer !== null) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+  }
+
   private isOverInteractiveUi(target: EventTarget | null): boolean {
     if (!(target instanceof Element)) return false;
     if (target === this.canvas) return false;
@@ -188,6 +198,7 @@ export class TacticalInputController {
   private onPointerDown = (ev: PointerEvent) => {
     // Touch path: tap-select/order, one-finger pan, and two-finger pan/pinch.
     if (ev.pointerType === 'touch') {
+      requestFullscreenOnFirstTouch();
       this.touchPointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
       if (this.touchPointers.size === 1) {
         this.singleTouchPan = {
@@ -198,6 +209,23 @@ export class TacticalInputController {
           lastY: ev.clientY,
           moved: false,
         };
+        // Long-press on an enemy unit = attack order (500 ms threshold).
+        const lpX = ev.clientX;
+        const lpY = ev.clientY;
+        this.longPressTimer = setTimeout(() => {
+          this.longPressTimer = null;
+          if (this.singleTouchPan?.moved) return;
+          const selected = this.selection.getSelectedUnits();
+          if (!selected.length) return;
+          const target = this.resolver.unitAt(lpX, lpY);
+          if (target && target.faction === 'enemy' && !target.isDestroyed) {
+            if (this.command.issueAttackTarget(selected, target.id)) {
+              this.cb.onSfx('attack');
+              this.cb.onEvent('attack', `Attack order: ${target.name}`);
+              this.suppressNextTapUntil = performance.now() + 600;
+            }
+          }
+        }, 500);
       }
       if (this.touchPointers.size >= 2) {
         const [a, b] = [...this.touchPointers.values()];
@@ -205,6 +233,7 @@ export class TacticalInputController {
         this.lastTouchDistance = distance2d(a, b);
         this.singleTouchPan = null;
         this.suppressNextTapUntil = performance.now() + 500;
+        this.clearLongPress();
       }
       try {
         this.canvas.setPointerCapture(ev.pointerId);
@@ -262,6 +291,7 @@ export class TacticalInputController {
         const dxFromStart = ev.clientX - this.singleTouchPan.startX;
         const dyFromStart = ev.clientY - this.singleTouchPan.startY;
         if (this.singleTouchPan.moved || Math.hypot(dxFromStart, dyFromStart) > SELECTION_BOX_DRAG_THRESHOLD) {
+          this.clearLongPress();
           this.singleTouchPan.moved = true;
           this.camera.panFromScreenDelta(ev.clientX - this.singleTouchPan.lastX, ev.clientY - this.singleTouchPan.lastY);
           this.singleTouchPan.lastX = ev.clientX;
@@ -334,6 +364,7 @@ export class TacticalInputController {
 
   private onPointerUp = (ev: PointerEvent) => {
     if (ev.pointerType === 'touch') {
+      this.clearLongPress();
       const wasSinglePan = this.singleTouchPan?.id === ev.pointerId && this.singleTouchPan.moved;
       this.touchPointers.delete(ev.pointerId);
       if (this.singleTouchPan?.id === ev.pointerId) {
@@ -410,6 +441,7 @@ export class TacticalInputController {
 
   private onPointerCancel = (ev: PointerEvent) => {
     if (ev.pointerType === 'touch') {
+      this.clearLongPress();
       this.touchPointers.delete(ev.pointerId);
       this.lastTouchCenter = null;
       this.lastTouchDistance = 0;
@@ -518,6 +550,7 @@ export class TacticalInputController {
   };
 
   private onBlur = () => {
+    this.clearLongPress();
     this.camera.clearKeys();
     this.middleDown = null;
     this.altRotate = null;
@@ -543,6 +576,14 @@ export class TacticalInputController {
       this.cb.onSelectionBoxChange(null);
     }
   };
+}
+
+let _fullscreenRequested = false;
+function requestFullscreenOnFirstTouch() {
+  if (_fullscreenRequested) return;
+  _fullscreenRequested = true;
+  document.documentElement.requestFullscreen?.().catch(() => {});
+  (screen.orientation as any)?.lock?.('landscape').catch?.(() => {});
 }
 
 function midpoint(a: { x: number; y: number }, b: { x: number; y: number }) {

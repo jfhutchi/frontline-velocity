@@ -208,12 +208,7 @@ export class TacticalCameraController {
     if (this.keys.has('e')) this.desiredAlpha += TACTICAL_CAMERA_ROTATE_SPEED * dt;
     if (right === 0 && forward === 0) return;
     const speed = this.panSpeedScale();
-    // Keyboard pan uses the opposite sign of edge-scroll / MMB drag for the
-    // same "screen-forward" intent: players expect W / up-arrow to move the
-    // view into the battlefield (camera target slides away from the camera),
-    // which required negating the basis combination that was tuned for pointer
-    // edge vectors first. Edge scroll and middle-mouse paths stay unchanged.
-    this.panByWorldAxes(-right * speed * dt, -forward * speed * dt);
+    this.panByWorldAxes(right * speed * dt, forward * speed * dt);
   }
 
   private applyEdgeScroll(dt: number) {
@@ -243,8 +238,11 @@ export class TacticalCameraController {
   }
 
   private panByWorldAxes(rightAmount: number, forwardAmount: number) {
-    const right = { x: Math.cos(this.desiredAlpha), z: -Math.sin(this.desiredAlpha) };
-    const forward = { x: Math.sin(this.desiredAlpha), z: Math.cos(this.desiredAlpha) };
+    // Camera right on ground plane: perpendicular to view direction, derived from alpha.
+    // Camera position offset = (cos α, _, sin α) * r, so view direction = (-cos α, 0, -sin α).
+    // right = view × worldUp projected = (sin α, 0, -cos α).
+    const right = { x: Math.sin(this.desiredAlpha), z: -Math.cos(this.desiredAlpha) };
+    const forward = { x: -Math.cos(this.desiredAlpha), z: -Math.sin(this.desiredAlpha) };
     this.desiredTarget.x += right.x * rightAmount + forward.x * forwardAmount;
     this.desiredTarget.z += right.z * rightAmount + forward.z * forwardAmount;
   }

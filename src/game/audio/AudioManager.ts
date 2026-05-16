@@ -37,6 +37,18 @@ class AudioManagerImpl {
     if (this.master) this.master.gain.value = m ? 0 : 0.55;
   }
 
+  suspend() {
+    if (this.ctx && this.ctx.state === 'running') {
+      this.ctx.suspend().catch(() => {});
+    }
+  }
+
+  resume() {
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+  }
+
   setMusicMuted(m: boolean) {
     this.musicMuted = m;
     if (this.musicGain) this.musicGain.gain.value = m ? 0 : 0.18;
