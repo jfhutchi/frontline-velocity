@@ -7,6 +7,7 @@ import { GameEngine } from './GameEngine';
 import { useGameStore } from './state/gameStore';
 import { isTouchDevice } from './input/TouchControls';
 import { MobileTouchControls } from '../ui/MobileTouchControls';
+import { MobileTacticalControls } from '../ui/MobileTacticalControls';
 import { AudioManager } from './audio/AudioManager';
 import type { SelectionBoxRect } from './input/TacticalInputController';
 
@@ -220,6 +221,9 @@ export const GameRoot: React.FC = () => {
           />
         )}
         {ready && (screen === 'tactical' || screen === 'directControl') && <ControlsHelp mode={screen} />}
+        {ready && screen === 'tactical' && !paused && isTouchDevice() && (
+          <MobileTacticalControls engine={engineRef.current} />
+        )}
         {ready && screen === 'directControl' && isTouchDevice() && (
           <MobileTouchControls
             onInputChange={(forward, turn, fire) => engineRef.current?.setMobileVehicleInput(forward, turn, fire)}

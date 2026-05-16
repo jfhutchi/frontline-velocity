@@ -30,7 +30,7 @@ export interface TacticalInputCallbacks {
  *
  * - Left button:   click = select / Shift+click = toggle / drag = box select.
  * - Right button:  context order against ground or enemy unit.
- * - Middle button: drag pans the camera.
+ * - Middle button / one-finger touch drag: pan the camera.
  * - Wheel:         smooth zoom.
  * - Q / E, WASD, arrow keys: routed to the TacticalCameraController.
  *
@@ -64,6 +64,14 @@ export class TacticalInputController {
   private touchPointers = new Map<number, { x: number; y: number }>();
   private lastTouchCenter: { x: number; y: number } | null = null;
   private lastTouchDistance = 0;
+  private singleTouchPan: {
+    id: number;
+    startX: number;
+    startY: number;
+    lastX: number;
+    lastY: number;
+    moved: boolean;
+  } | null = null;
   /** Suppress next click if a touch gesture took place. */
   private suppressNextTapUntil = 0;
 
@@ -132,6 +140,7 @@ export class TacticalInputController {
     this.middleDown = null;
     this.altRotate = null;
     this.touchPointers.clear();
+    this.singleTouchPan = null;
     this.cursor.valid = false;
   }
 
@@ -177,16 +186,32 @@ export class TacticalInputController {
   private onContextMenu = (ev: Event) => ev.preventDefault();
 
   private onPointerDown = (ev: PointerEvent) => {
-    // Touch path: support tap-select / two-finger pan/pinch (mobile not the
-    // primary target in v0.0.3, but we keep it functional).
+    // Touch path: tap-select/order, one-finger pan, and two-finger pan/pinch.
     if (ev.pointerType === 'touch') {
       this.touchPointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+      if (this.touchPointers.size === 1) {
+        this.singleTouchPan = {
+          id: ev.pointerId,
+          startX: ev.clientX,
+          startY: ev.clientY,
+          lastX: ev.clientX,
+          lastY: ev.clientY,
+          moved: false,
+        };
+      }
       if (this.touchPointers.size >= 2) {
         const [a, b] = [...this.touchPointers.values()];
         this.lastTouchCenter = midpoint(a, b);
         this.lastTouchDistance = distance2d(a, b);
+        this.singleTouchPan = null;
         this.suppressNextTapUntil = performance.now() + 500;
       }
+      try {
+        this.canvas.setPointerCapture(ev.pointerId);
+      } catch {
+        /* ignore */
+      }
+      ev.preventDefault();
       return;
     }
 
@@ -229,10 +254,23 @@ export class TacticalInputController {
   };
 
   private onPointerMove = (ev: PointerEvent) => {
-    // Touch pan / pinch (kept functional for mobile).
+    // Touch pan / pinch.
     if (ev.pointerType === 'touch') {
       if (!this.touchPointers.has(ev.pointerId)) return;
       this.touchPointers.set(ev.pointerId, { x: ev.clientX, y: ev.clientY });
+      if (this.touchPointers.size === 1 && this.singleTouchPan?.id === ev.pointerId) {
+        const dxFromStart = ev.clientX - this.singleTouchPan.startX;
+        const dyFromStart = ev.clientY - this.singleTouchPan.startY;
+        if (this.singleTouchPan.moved || Math.hypot(dxFromStart, dyFromStart) > SELECTION_BOX_DRAG_THRESHOLD) {
+          this.singleTouchPan.moved = true;
+          this.camera.panFromScreenDelta(ev.clientX - this.singleTouchPan.lastX, ev.clientY - this.singleTouchPan.lastY);
+          this.singleTouchPan.lastX = ev.clientX;
+          this.singleTouchPan.lastY = ev.clientY;
+          this.suppressNextTapUntil = performance.now() + 180;
+          ev.preventDefault();
+        }
+        return;
+      }
       if (this.touchPointers.size >= 2 && this.lastTouchCenter) {
         const [a, b] = [...this.touchPointers.values()];
         const center = midpoint(a, b);
@@ -296,12 +334,21 @@ export class TacticalInputController {
 
   private onPointerUp = (ev: PointerEvent) => {
     if (ev.pointerType === 'touch') {
+      const wasSinglePan = this.singleTouchPan?.id === ev.pointerId && this.singleTouchPan.moved;
       this.touchPointers.delete(ev.pointerId);
+      if (this.singleTouchPan?.id === ev.pointerId) {
+        this.singleTouchPan = null;
+      }
       if (this.touchPointers.size < 2) {
         this.lastTouchCenter = null;
         this.lastTouchDistance = 0;
       }
-      if (performance.now() < this.suppressNextTapUntil || this.touchPointers.size > 0) return;
+      try {
+        this.canvas.releasePointerCapture(ev.pointerId);
+      } catch {
+        /* ignore */
+      }
+      if (wasSinglePan || performance.now() < this.suppressNextTapUntil || this.touchPointers.size > 0) return;
       // Single-finger tap on touch devices: select / order similar to v0.0.2.
       this.handleTouchTap(ev);
       return;
@@ -366,6 +413,7 @@ export class TacticalInputController {
       this.touchPointers.delete(ev.pointerId);
       this.lastTouchCenter = null;
       this.lastTouchDistance = 0;
+      if (this.singleTouchPan?.id === ev.pointerId) this.singleTouchPan = null;
       return;
     }
     this.middleDown = null;
@@ -476,6 +524,7 @@ export class TacticalInputController {
     this.leftDown = null;
     this.rightDown = null;
     this.touchPointers.clear();
+    this.singleTouchPan = null;
     this.cursor.valid = false;
     this.cb.onSelectionBoxChange(null);
   };
@@ -488,6 +537,7 @@ export class TacticalInputController {
       this.leftDown = null;
       this.rightDown = null;
       this.touchPointers.clear();
+      this.singleTouchPan = null;
       this.cursor.valid = false;
       this.camera.setEdgeScroll(0, 0);
       this.cb.onSelectionBoxChange(null);

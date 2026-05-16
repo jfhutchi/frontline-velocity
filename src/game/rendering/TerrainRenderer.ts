@@ -46,6 +46,7 @@ export class TerrainRenderer {
       }
     }
 
+    this.buildBattlefieldDetails(size);
     this.objectiveRing = this.buildObjectiveRing(mission.objective);
   }
 
@@ -435,6 +436,16 @@ export class TerrainRenderer {
       foliage.parent = trunk;
       foliage.position = new Vector3(0, trunkH / 2 + foliageH / 2 - 0.18, 0);
       this.shadowCaster(foliage);
+      const lower = MeshBuilder.CreateCylinder(`${d.id}_foliage_low`, {
+        height: foliageH * 0.58,
+        diameterTop: 0.28,
+        diameterBottom: 2.65 + d.scale.y * 0.2,
+        tessellation: 9,
+      }, this.scene);
+      lower.material = this.material(`${d.id}_fol_low`, colorVariant(COLOR.treePine, `${d.id}_low`, 0.05));
+      lower.parent = trunk;
+      lower.position = new Vector3(0, trunkH / 2 + foliageH * 0.24, 0);
+      this.shadowCaster(lower);
     } else {
       const diameter = d.tint === 'shrub' ? d.scale.y * 1.55 : 2.0 + d.scale.y * 0.32;
       const foliage = MeshBuilder.CreateSphere(`${d.id}_foliage`, { diameter, segments: 7 }, this.scene);
@@ -444,6 +455,24 @@ export class TerrainRenderer {
       foliage.scaling.y = d.tint === 'shrub' ? 0.62 : 0.86;
       foliage.position = new Vector3(0, trunkH / 2 + diameter * 0.34, 0);
       this.shadowCaster(foliage);
+      if (d.tint !== 'shrub') {
+        const offsets = [
+          { x: 0.48, z: -0.28, s: 0.64 },
+          { x: -0.42, z: 0.34, s: 0.58 },
+          { x: 0.12, z: 0.52, s: 0.52 },
+        ];
+        offsets.forEach((o, i) => {
+          const crown = MeshBuilder.CreateSphere(`${d.id}_crown_${i}`, {
+            diameter: diameter * o.s,
+            segments: 7,
+          }, this.scene);
+          crown.material = this.material(`${d.id}_crown_mat_${i}`, colorVariant(palette, `${d.id}_${i}`, 0.08));
+          crown.parent = trunk;
+          crown.scaling.y = 0.72;
+          crown.position = new Vector3(o.x * diameter * 0.34, trunkH / 2 + diameter * (0.28 + i * 0.035), o.z * diameter * 0.34);
+          this.shadowCaster(crown);
+        });
+      }
     }
     return trunk;
   }
@@ -455,6 +484,87 @@ export class TerrainRenderer {
     m.material = this.material(`${d.id}_mat`, colorVariant(COLOR.hill, d.id, 0.04));
     m.receiveShadows = true;
     return m;
+  }
+
+  private buildBattlefieldDetails(size: number) {
+    const craterMat = this.material('crater_scars_mat', { r: 0.14, g: 0.12, b: 0.09 });
+    craterMat.alpha = 0.58;
+    craterMat.specularColor = new Color3(0, 0, 0);
+    const rimMat = this.material('crater_rim_mat', { r: 0.31, g: 0.25, b: 0.17 });
+    rimMat.alpha = 0.5;
+    const trackMat = this.material('track_scars_mat', { r: 0.18, g: 0.15, b: 0.1 });
+    trackMat.alpha = 0.44;
+
+    const half = size / 2;
+    for (let i = 0; i < 22; i += 1) {
+      const x = (seeded(i * 11 + 3) * 2 - 1) * (half - 18);
+      const z = (seeded(i * 13 + 9) * 2 - 1) * (half - 18);
+      if (Math.abs(x) < 12 || Math.abs(z) < 12) continue;
+      const diameter = 2.4 + seeded(i * 17 + 2) * 4.6;
+      const crater = MeshBuilder.CreateCylinder(`crater_${i}`, {
+        diameter,
+        height: 0.035,
+        tessellation: 24,
+      }, this.scene);
+      crater.position = new Vector3(x, 0.09, z);
+      crater.scaling.x = 0.8 + seeded(i * 5 + 1) * 0.45;
+      crater.scaling.z = 0.7 + seeded(i * 7 + 4) * 0.55;
+      crater.rotation.y = seeded(i * 19 + 6) * Math.PI;
+      crater.material = craterMat;
+      this.meshes.push(crater);
+
+      const rim = MeshBuilder.CreateTorus(`crater_rim_${i}`, {
+        diameter: diameter * 1.04,
+        thickness: 0.1,
+        tessellation: 24,
+      }, this.scene);
+      rim.position = new Vector3(x, 0.12, z);
+      rim.scaling.x = crater.scaling.x;
+      rim.scaling.z = crater.scaling.z;
+      rim.rotation.y = crater.rotation.y;
+      rim.material = rimMat;
+      this.meshes.push(rim);
+    }
+
+    for (let i = 0; i < 14; i += 1) {
+      const horizontal = i % 2 === 0;
+      const track = MeshBuilder.CreateBox(`mud_track_${i}`, {
+        width: horizontal ? 18 + seeded(i + 31) * 18 : 0.38,
+        height: 0.025,
+        depth: horizontal ? 0.38 : 18 + seeded(i + 41) * 18,
+      }, this.scene);
+      const lane = (seeded(i * 23 + 5) * 2 - 1) * (half - 26);
+      const cross = (seeded(i * 29 + 7) * 2 - 1) * 18;
+      track.position = horizontal ? new Vector3(lane, 0.115, cross) : new Vector3(cross, 0.115, lane);
+      track.rotation.y = (seeded(i * 37 + 11) - 0.5) * 0.4 + (horizontal ? 0 : Math.PI / 2);
+      track.material = trackMat;
+      this.meshes.push(track);
+    }
+
+    const smokeMat = this.material('ambient_smoke_mat', { r: 0.17, g: 0.17, b: 0.15 });
+    smokeMat.alpha = 0.34;
+    smokeMat.specularColor = new Color3(0, 0, 0);
+    const smokeSources = [
+      { x: -12, z: -18, scale: 1.1 },
+      { x: 22, z: -24, scale: 0.9 },
+      { x: 3, z: 16, scale: 0.75 },
+    ];
+    smokeSources.forEach((source, sourceIdx) => {
+      for (let i = 0; i < 8; i += 1) {
+        const puff = MeshBuilder.CreateSphere(`ambient_smoke_${sourceIdx}_${i}`, {
+          diameter: (2.4 + i * 0.42) * source.scale,
+          segments: 8,
+        }, this.scene);
+        puff.position = new Vector3(
+          source.x + Math.sin(i * 1.7) * (0.45 + i * 0.12),
+          2.0 + i * 1.45,
+          source.z + Math.cos(i * 1.2) * (0.45 + i * 0.14),
+        );
+        puff.scaling.y = 0.72 + i * 0.08;
+        puff.material = smokeMat;
+        this.meshes.push(puff);
+      }
+    });
   }
 
   private addSubtleTerrainHeight(ground: Mesh) {
@@ -503,4 +613,9 @@ function colorVariant(c: { r: number; g: number; b: number }, seed: string, amou
     g: Math.max(0, Math.min(1, c.g + t)),
     b: Math.max(0, Math.min(1, c.b + t)),
   };
+}
+
+function seeded(seed: number) {
+  const x = Math.sin(seed * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
 }
