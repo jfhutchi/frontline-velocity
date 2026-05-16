@@ -33,9 +33,6 @@ export const DirectControlHUD: React.FC<Props> = ({ engine }) => {
         <span className="active">N</span>
         <span>NE</span>
       </div>
-      <div className="dc-top-panel">
-        <span className="name">{u.name}</span> | {u.weaponName} | {objective ? `Cap ${(objective.heldSeconds || 0).toFixed(0)}/${objective.requiredHoldSeconds}s` : ''}
-      </div>
       <div className="dc-crosshair" />
       <div className="dc-reload-ring" style={{ ['--reload' as string]: `${Math.round(u.reloadProgress * 100)}%` }} />
       <div className="dc-bottom-panel">
@@ -66,7 +63,7 @@ export const DirectControlHUD: React.FC<Props> = ({ engine }) => {
           engine?.exitDirectControl();
         }}
       >
-        Return to Command (R)
+        Return to Command (Tab)
       </button>
       <Minimap engine={engine} />
     </div>

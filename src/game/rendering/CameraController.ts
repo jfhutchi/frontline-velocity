@@ -40,7 +40,7 @@ export class CameraController {
     this.chaseCam.maxCameraSpeed = 180;
     this.chaseCam.minZ = 0.18;
     this.chaseCam.maxZ = 600;
-    this.chaseCam.fov = 0.86;
+    this.chaseCam.fov = 0.82;
     this.tactical.reset(true);
     this.activate('tactical');
   }
@@ -103,20 +103,20 @@ export class CameraController {
     const sin = Math.sin(yaw);
     const cos = Math.cos(yaw);
     const chaseBack =
-      unit.type === 'reconJeep' ? 5.6 :
-      unit.type === 'heavyTank' ? 11.4 :
-      10.4;
+      unit.type === 'reconJeep' ? 5.2 :
+      unit.type === 'heavyTank' ? 5.35 :
+      4.25;
     const chaseHeight =
-      unit.type === 'reconJeep' ? 3.2 :
-      unit.type === 'heavyTank' ? 6.8 :
-      6.2;
+      unit.type === 'reconJeep' ? 3.0 :
+      unit.type === 'heavyTank' ? 3.55 :
+      2.95;
     const aimHeight =
       unit.type === 'reconJeep' ? 1.65 :
-      unit.type === 'heavyTank' ? 2.95 :
-      2.55;
+      unit.type === 'heavyTank' ? 2.55 :
+      2.2;
     const targetAhead =
       unit.type === 'reconJeep' ? 34 :
-      46;
+      32;
     const shake = this.consumeShake();
     const desiredPosition = new Vector3(
       unit.position.x - sin * chaseBack + shake.x,

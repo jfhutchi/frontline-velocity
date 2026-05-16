@@ -41,19 +41,19 @@ export function createBabylonContext(canvas: HTMLCanvasElement): BabylonContext 
   engine.setHardwareScalingLevel(isTouchDevice && ratio > 1 ? Math.min(1.6, Math.max(1, ratio / 1.45)) : 1);
 
   const scene = new Scene(engine);
-  scene.clearColor = new Color4(0.58, 0.67, 0.72, 1);
-  scene.ambientColor = new Color3(0.25, 0.27, 0.22);
+  scene.clearColor = new Color4(0.66, 0.78, 0.88, 1);
+  scene.ambientColor = new Color3(0.34, 0.34, 0.29);
   scene.fogMode = Scene.FOGMODE_LINEAR;
-  scene.fogColor = new Color3(0.58, 0.62, 0.58);
-  scene.fogStart = 145;
-  scene.fogEnd = 420;
+  scene.fogColor = new Color3(0.75, 0.86, 0.92);
+  scene.fogStart = 235;
+  scene.fogEnd = 720;
   scene.imageProcessingConfiguration.toneMappingEnabled = true;
   scene.imageProcessingConfiguration.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
-  scene.imageProcessingConfiguration.exposure = 1.04;
-  scene.imageProcessingConfiguration.contrast = 1.27;
+  scene.imageProcessingConfiguration.exposure = 1.12;
+  scene.imageProcessingConfiguration.contrast = 1.22;
   scene.imageProcessingConfiguration.vignetteEnabled = true;
-  scene.imageProcessingConfiguration.vignetteWeight = 0.86;
-  scene.imageProcessingConfiguration.vignetteColor = new Color4(0.035, 0.04, 0.035, 1);
+  scene.imageProcessingConfiguration.vignetteWeight = 0.34;
+  scene.imageProcessingConfiguration.vignetteColor = new Color4(0.05, 0.045, 0.036, 1);
 
   const camera = new ArcRotateCamera(
     'tactical-cam',
@@ -74,12 +74,12 @@ export function createBabylonContext(canvas: HTMLCanvasElement): BabylonContext 
 
   // Don't auto-attach inputs; CameraController owns input wiring per mode.
   const hemiLight = new HemisphericLight('hemi', new Vector3(0.2, 1, 0.1), scene);
-  hemiLight.intensity = 0.72;
-  hemiLight.groundColor = new Color3(0.18, 0.15, 0.1);
+  hemiLight.intensity = 0.82;
+  hemiLight.groundColor = new Color3(0.22, 0.17, 0.11);
 
-  const sunLight = new DirectionalLight('sun', new Vector3(-0.42, -0.82, -0.34), scene);
-  sunLight.intensity = 1.52;
-  sunLight.position = new Vector3(88, 105, 74);
+  const sunLight = new DirectionalLight('sun', new Vector3(-0.46, -0.78, -0.26), scene);
+  sunLight.intensity = 1.68;
+  sunLight.position = new Vector3(92, 112, 72);
   sunLight.shadowMinZ = 20;
   sunLight.shadowMaxZ = 260;
   const shadowGenerator = new ShadowGenerator(2048, sunLight);
@@ -115,9 +115,9 @@ function buildSkyDome(scene: Scene) {
   const skyTexture = new DynamicTexture('proceduralSky', { width: 1024, height: 512 }, scene, true);
   const ctx = skyTexture.getContext() as CanvasRenderingContext2D;
   const gradient = ctx.createLinearGradient(0, 0, 0, 512);
-  gradient.addColorStop(0, '#87a9bd');
-  gradient.addColorStop(0.42, '#b8c6c8');
-  gradient.addColorStop(1, '#d0c29d');
+  gradient.addColorStop(0, '#c5e6ff');
+  gradient.addColorStop(0.42, '#e5f1f4');
+  gradient.addColorStop(1, '#e4c68b');
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, 1024, 512);
 
@@ -126,7 +126,7 @@ function buildSkyDome(scene: Scene) {
     const y = 34 + seeded(i * 23 + 2) * 165;
     const w = 70 + seeded(i * 29 + 4) * 160;
     const h = 18 + seeded(i * 31 + 5) * 48;
-    const alpha = 0.16 + seeded(i * 37 + 9) * 0.18;
+    const alpha = 0.18 + seeded(i * 37 + 9) * 0.2;
     const cloudGradient = ctx.createRadialGradient(x, y, 2, x, y, w);
     cloudGradient.addColorStop(0, `rgba(255,255,244,${alpha})`);
     cloudGradient.addColorStop(0.5, `rgba(244,238,220,${alpha * 0.62})`);
@@ -157,11 +157,11 @@ function buildSkyDome(scene: Scene) {
 
 function buildCloudBanks(scene: Scene) {
   const banks = [
-    { x: -66, y: 54, z: -174, w: 92, h: 30 },
-    { x: 20, y: 66, z: -192, w: 118, h: 34 },
-    { x: 92, y: 52, z: -150, w: 76, h: 24 },
-    { x: -126, y: 48, z: -124, w: 72, h: 22 },
-    { x: 44, y: 66, z: 150, w: 84, h: 26 },
+    { x: -74, y: 52, z: -174, w: 116, h: 34 },
+    { x: 16, y: 66, z: -198, w: 150, h: 42 },
+    { x: 98, y: 52, z: -146, w: 96, h: 30 },
+    { x: -128, y: 48, z: -122, w: 88, h: 26 },
+    { x: 42, y: 66, z: 150, w: 104, h: 30 },
   ];
 
   banks.forEach((bank, bankIndex) => {
@@ -173,7 +173,7 @@ function buildCloudBanks(scene: Scene) {
       const y = 70 + seeded(bankIndex * 37 + i * 11) * 48;
       const rx = 46 + seeded(bankIndex * 41 + i * 13) * 74;
       const ry = 16 + seeded(bankIndex * 43 + i * 17) * 26;
-      const alpha = 0.13 + seeded(bankIndex * 47 + i * 19) * 0.19;
+      const alpha = 0.16 + seeded(bankIndex * 47 + i * 19) * 0.2;
       const grad = ctx.createRadialGradient(x, y, 2, x, y, rx);
       grad.addColorStop(0, `rgba(246,244,226,${alpha})`);
       grad.addColorStop(0.55, `rgba(228,226,208,${alpha * 0.58})`);

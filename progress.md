@@ -26,6 +26,14 @@ TODO:
 - Direct-control now keeps the controlled tank visible and uses a third-person over-the-turret chase camera with health/reload/speed meters and a separate Return to Command button.
 - Verification included repeated typecheck/build gates, develop-web-game client smoke, mobile briefing scroll/start on 375x667, tactical/direct-control screenshots, and a controls preservation script covering selection, control groups, right-click order, direct-control entry, drive/fire, and return to tactical.
 
+2026-05-16 v0.0.6 reference tank-view push:
+- Bumped the push version to `0.0.6`; the main menu now displays `v0.0.6` with label `Reference Tank-View Push`.
+- Tightened the direct-control camera to a lower, closer over-the-turret chase composition so the tank fills the foreground more like the uploaded reference.
+- Added original foreground tank detail: darker olive materials, engine grilles, rear stowage, deck bolts, turret cheeks, barrel sleeve, coax detail, cupola ring, and star insignia decals.
+- Added direct-view set dressing: labeled road signs, south-approach stone walls/hedges, an extra crop field, muted wheat rows, road ruts/gravel/dust, stronger smoke columns, and a taller church tower.
+- Added procedural wall/roof material textures for buildings and removed the extra direct-control top unit-status box; Return to Command now advertises `Tab` while `R` still works.
+- Validation: `npm run typecheck` PASS, `npm run build` PASS, develop-web-game client smoke PASS, custom Playwright direct-control screenshot/state PASS with no console errors.
+
 2026-05-15 follow-up pass:
 - Starting a mobile/camera/UI/graphics polish pass from the user prompt: "The state of this game is a bit bad. It doesn't work on mobile browsers and the camera controls are bad the ui is bad and I want the graphics to be a lot better"
 - Inspection found touch tactical mode only supported tap and two-finger pan/pinch, with no touch-first command/camera surface; HUD panels also crowd small screens.

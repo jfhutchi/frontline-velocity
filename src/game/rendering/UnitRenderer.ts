@@ -1,5 +1,6 @@
 import {
   Color3,
+  DynamicTexture,
   LinesMesh,
   MeshBuilder,
   Scene,
@@ -69,7 +70,11 @@ export class UnitRenderer {
     mk('glass', { r: 0.28, g: 0.42, b: 0.46 });
     mk('gunMetal', { r: 0.18, g: 0.18, b: 0.17 });
     mk('soldier', { r: 0.22, g: 0.32, b: 0.19 });
+    mk('stowageCanvas', { r: 0.37, g: 0.33, b: 0.22 });
+    mk('deckDetail', { r: 0.1, g: 0.105, b: 0.085 });
+    mk('edgeHighlight', { r: 0.43, g: 0.46, b: 0.3 });
     mk('wreck', { r: 0.17, g: 0.15, b: 0.13 });
+    this.materials.insignia = this.buildInsigniaMaterial();
     const sel = mk('selectionRing', COLOR.selection);
     sel.emissiveColor = new Color3(0.3, 0.7, 0.3);
     sel.alpha = 0.85;
@@ -90,6 +95,35 @@ export class UnitRenderer {
     hpFill.emissiveColor = new Color3(0.3, 0.7, 0.3);
     const hpLow = mk('hpLow', { r: 0.92, g: 0.25, b: 0.22 });
     hpLow.emissiveColor = new Color3(0.65, 0.08, 0.06);
+  }
+
+  private buildInsigniaMaterial(): StandardMaterial {
+    const tex = new DynamicTexture('tank_insignia_star', { width: 128, height: 128 }, this.scene, true);
+    const ctx = tex.getContext() as CanvasRenderingContext2D;
+    ctx.clearRect(0, 0, 128, 128);
+    ctx.fillStyle = 'rgba(245,242,220,0.96)';
+    ctx.beginPath();
+    for (let i = 0; i < 10; i += 1) {
+      const radius = i % 2 === 0 ? 48 : 19;
+      const angle = -Math.PI / 2 + (i * Math.PI) / 5;
+      const x = 64 + Math.cos(angle) * radius;
+      const y = 64 + Math.sin(angle) * radius;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    tex.update();
+    tex.hasAlpha = true;
+    const mat = new StandardMaterial('tankInsigniaMat', this.scene);
+    mat.diffuseTexture = tex;
+    mat.opacityTexture = tex;
+    mat.emissiveTexture = tex;
+    mat.emissiveColor = new Color3(0.18, 0.18, 0.15);
+    mat.specularColor = Color3.Black();
+    mat.useAlphaFromDiffuseTexture = true;
+    mat.backFaceCulling = false;
+    return mat;
   }
 
   ensureVisual(unit: Unit): UnitVisual {
@@ -146,31 +180,69 @@ export class UnitRenderer {
         glacis.rotation.x = -0.22;
         const rearDeck = this.mesh(`rearDeck_${unit.id}`, MeshBuilder.CreateBox(`rearDeck_${unit.id}`, { width: 2.35 * scale, height: 0.14 * scale, depth: 1.2 * scale }, this.scene), this.materials.gunMetal, root);
         rearDeck.position = new Vector3(0, 1.56 * scale, -1.42 * scale);
-        for (const x of [-0.78, 0, 0.78]) {
-          const pack = this.mesh(`stowage_${unit.id}_${x}`, MeshBuilder.CreateBox(`stowage_${unit.id}_${x}`, { width: 0.52 * scale, height: 0.34 * scale, depth: 0.74 * scale }, this.scene), this.materials.soldier, root);
-          pack.position = new Vector3(x * scale, 1.54 * scale, -2.1 * scale);
-          pack.rotation.x = 0.08;
+        for (const x of [-0.78, -0.26, 0.26, 0.78]) {
+          const grille = this.mesh(`engine_grille_${unit.id}_${x}`, MeshBuilder.CreateBox(`engine_grille_${unit.id}_${x}`, { width: 0.34 * scale, height: 0.06 * scale, depth: 0.95 * scale }, this.scene), this.materials.deckDetail, root);
+          grille.position = new Vector3(x * scale, 1.66 * scale, -1.42 * scale);
+        }
+        for (const x of [-1.02, -0.5, 0.02, 0.54, 1.06]) {
+          const pack = this.mesh(`stowage_${unit.id}_${x}`, MeshBuilder.CreateSphere(`stowage_${unit.id}_${x}`, { diameter: 0.58 * scale, segments: 8 }, this.scene), this.materials.stowageCanvas, root);
+          pack.scaling = new Vector3(1.05, 0.52, 0.72);
+          pack.position = new Vector3(x * scale, 1.5 * scale, -2.26 * scale);
+          pack.rotation.x = 0.08 + x * 0.02;
+        }
+        for (const x of [-1.3, 1.3]) {
+          const rearBox = this.mesh(`rear_box_${unit.id}_${x}`, MeshBuilder.CreateBox(`rear_box_${unit.id}_${x}`, { width: 0.42 * scale, height: 0.42 * scale, depth: 0.54 * scale }, this.scene), this.materials.stowageCanvas, root);
+          rearBox.position = new Vector3(x * scale, 1.28 * scale, -2.2 * scale);
+          rearBox.rotation.z = x < 0 ? -0.05 : 0.05;
+        }
+        for (const x of [-1.12, 1.12]) {
+          for (const z of [-0.74, -0.24, 0.26, 0.76]) {
+            const deckBolt = this.mesh(`deck_bolt_${unit.id}_${x}_${z}`, MeshBuilder.CreateCylinder(`deck_bolt_${unit.id}_${x}_${z}`, { diameter: 0.1 * scale, height: 0.045 * scale, tessellation: 8 }, this.scene), this.materials.deckDetail, root);
+            deckBolt.position = new Vector3(x * scale, 1.62 * scale, z * scale);
+          }
         }
 
         turretPivot = new TransformNode(`turretPivot_${unit.id}`, this.scene);
         turretPivot.parent = root;
         turretPivot.position.y = 1.68 * scale;
         this.mesh(`turretBase_${unit.id}`, MeshBuilder.CreateCylinder(`turretBase_${unit.id}`, { diameter: 1.85 * scale, height: 0.72 * scale, tessellation: 10 }, this.scene), turretMat, turretPivot);
+        const turretRear = this.mesh(`turretRear_${unit.id}`, MeshBuilder.CreateBox(`turretRear_${unit.id}`, { width: 1.45 * scale, height: 0.42 * scale, depth: 0.76 * scale }, this.scene), turretMat, turretPivot);
+        turretRear.position = new Vector3(0, -0.03 * scale, -0.58 * scale);
+        for (const x of [-0.72, 0.72]) {
+          const cheek = this.mesh(`turretCheek_${unit.id}_${x}`, MeshBuilder.CreateBox(`turretCheek_${unit.id}_${x}`, { width: 0.42 * scale, height: 0.46 * scale, depth: 0.78 * scale }, this.scene), turretMat, turretPivot);
+          cheek.position = new Vector3(x * scale, -0.01 * scale, 0.28 * scale);
+          cheek.rotation.y = x < 0 ? 0.2 : -0.2;
+        }
         const mantlet = this.mesh(`mantlet_${unit.id}`, MeshBuilder.CreateBox(`mantlet_${unit.id}`, { width: 0.9 * scale, height: 0.5 * scale, depth: 0.34 * scale }, this.scene), this.materials.gunMetal, turretPivot);
         mantlet.position = new Vector3(0, 0.02 * scale, 0.8 * scale);
+        const barrelSleeve = this.mesh(`barrelSleeve_${unit.id}`, MeshBuilder.CreateCylinder(`barrelSleeve_${unit.id}`, { diameter: 0.36 * scale, height: 0.76 * scale, tessellation: 10 }, this.scene), this.materials.gunMetal, turretPivot);
+        barrelSleeve.rotation.x = Math.PI / 2;
+        barrelSleeve.position.z = 1.16 * scale;
+        barrelSleeve.position.y = 0.05 * scale;
         const barrel = this.mesh(`barrel_${unit.id}`, MeshBuilder.CreateCylinder(`barrel_${unit.id}`, { diameter: 0.22 * scale, height: 3.0 * scale, tessellation: 8 }, this.scene), this.materials.gunMetal, turretPivot);
         barrel.rotation.x = Math.PI / 2;
         barrel.position.z = 1.95 * scale;
         barrel.position.y = 0.05 * scale;
+        const coax = this.mesh(`coax_${unit.id}`, MeshBuilder.CreateCylinder(`coax_${unit.id}`, { diameter: 0.07 * scale, height: 1.45 * scale, tessellation: 6 }, this.scene), this.materials.gunMetal, turretPivot);
+        coax.rotation.x = Math.PI / 2;
+        coax.position = new Vector3(0.36 * scale, 0.18 * scale, 1.34 * scale);
         const muzzle = this.mesh(`muzzle_${unit.id}`, MeshBuilder.CreateCylinder(`muzzle_${unit.id}`, { diameter: 0.32 * scale, height: 0.28 * scale, tessellation: 10 }, this.scene), this.materials.gunMetal, turretPivot);
         muzzle.rotation.x = Math.PI / 2;
         muzzle.position.z = 3.48 * scale;
         muzzle.position.y = 0.05 * scale;
         const cupola = this.mesh(`cupola_${unit.id}`, MeshBuilder.CreateCylinder(`cupola_${unit.id}`, { diameter: 0.62 * scale, height: 0.32 * scale, tessellation: 10 }, this.scene), turretMat, turretPivot);
         cupola.position = new Vector3(-0.34 * scale, 0.52 * scale, -0.18 * scale);
+        const cupolaRing = this.mesh(`cupolaRing_${unit.id}`, MeshBuilder.CreateCylinder(`cupolaRing_${unit.id}`, { diameter: 0.74 * scale, height: 0.08 * scale, tessellation: 12 }, this.scene), this.materials.gunMetal, turretPivot);
+        cupolaRing.position = new Vector3(-0.34 * scale, 0.7 * scale, -0.18 * scale);
         const hatch = this.mesh(`hatch_${unit.id}`, MeshBuilder.CreateBox(`hatch_${unit.id}`, { width: 0.62 * scale, height: 0.08 * scale, depth: 0.42 * scale }, this.scene), this.materials.gunMetal, turretPivot);
         hatch.position = new Vector3(0.36 * scale, 0.52 * scale, -0.08 * scale);
         hatch.rotation.y = 0.34;
+        const turretInsignia = this.mesh(`turret_star_${unit.id}`, MeshBuilder.CreatePlane(`turret_star_${unit.id}`, { width: 0.86 * scale, height: 0.86 * scale }, this.scene), this.materials.insignia, turretPivot);
+        turretInsignia.position = new Vector3(0.98 * scale, 0.04 * scale, -0.18 * scale);
+        turretInsignia.rotation.y = Math.PI / 2;
+        const deckInsignia = this.mesh(`deck_star_${unit.id}`, MeshBuilder.CreatePlane(`deck_star_${unit.id}`, { width: 0.72 * scale, height: 0.72 * scale }, this.scene), this.materials.insignia, root);
+        deckInsignia.position = new Vector3(0.78 * scale, 1.66 * scale, -0.72 * scale);
+        deckInsignia.rotation.x = Math.PI / 2;
         break;
       }
       case 'reconJeep': {

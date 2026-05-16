@@ -102,7 +102,7 @@ export const GameRoot: React.FC = () => {
         }
       }
 
-      if (k === 'r' && store.screen === 'directControl') {
+      if ((k === 'r' || k === 'tab') && store.screen === 'directControl') {
         engine.exitDirectControl();
         ev.preventDefault();
         return;

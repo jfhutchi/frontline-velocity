@@ -96,6 +96,10 @@ function buildDecorations(): MapDecoration[] {
     ['wall_church_side', 'stoneWall', -40, 24, Math.PI / 2, 18, 1.0, 'stone'],
     ['wall_square_west', 'stoneWall', -12, -4, Math.PI / 2, 18, 0.9, 'stone'],
     ['wall_square_east', 'stoneWall', 12, 4, Math.PI / 2, 18, 0.9, 'stone'],
+    ['wall_south_approach_left', 'stoneWall', -17, 52, Math.PI / 2, 34, 1.0, 'stone'],
+    ['wall_south_approach_right', 'stoneWall', 17, 46, Math.PI / 2, 28, 1.0, 'stone'],
+    ['wall_village_garden', 'stoneWall', -27, 38, 0.12, 22, 0.95, 'stone'],
+    ['hedge_village_road', 'hedgerow', 28, 34, -0.08, 30, 1.8, 'shrub'],
     ['fence_south_field', 'fence', -57, 78, -0.18, 44, 0.8, 'wood'],
     ['fence_east_field', 'fence', 78, 50, Math.PI / 2, 42, 0.8, 'wood'],
     ['fence_west_lane', 'fence', -79, -18, Math.PI / 2, 38, 0.8, 'wood'],
@@ -134,6 +138,7 @@ function buildDecorations(): MapDecoration[] {
   }
   const setPieceFields: Array<[number, number, number, number, number]> = [
     [-74, 54, 0.18, 34, 26],
+    [-42, 58, 0.12, 26, 22],
     [72, 58, -0.28, 32, 24],
     [-78, -44, 0.44, 30, 22],
     [78, -52, -0.36, 34, 24],

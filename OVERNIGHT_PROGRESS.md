@@ -484,3 +484,76 @@ after merge).
 
 No Pages-breaking issues found. No source, workflow, or config changes
 were made during this verification pass. No commit created.
+
+---
+
+## 2026-05-16 v0.0.6 Reference Tank-View Push
+
+Phase:
+- Direct-control visual/reference pass after user requested the tank-view graphics
+  be pushed closer to the uploaded reference.
+
+Files changed:
+- `package.json`
+- `package-lock.json`
+- `README.md`
+- `progress.md`
+- `OVERNIGHT_PROGRESS.md`
+- `src/version.ts`
+- `src/game/constants.ts`
+- `src/game/GameRoot.tsx`
+- `src/game/missions/operationCrossroads.ts`
+- `src/game/rendering/BabylonScene.ts`
+- `src/game/rendering/CameraController.ts`
+- `src/game/rendering/TerrainRenderer.ts`
+- `src/game/rendering/UnitRenderer.ts`
+- `src/ui/DirectControlHUD.tsx`
+
+What changed:
+- Version bumped for this push: `0.0.6` in `package.json` /
+  `package-lock.json`, `v0.0.6` in `src/version.ts`, and main menu label
+  updated to `Reference Tank-View Push`.
+- Direct-control camera lowered and moved closer to the controlled vehicle so
+  the tank fills the foreground more like the uploaded tank-view reference.
+- Direct-control HUD now uses `Return to Command (Tab)` and the global key
+  handler accepts `Tab` in direct-control mode while preserving `R`.
+- Removed the extra direct-control top unit-status panel so the HUD more
+  closely matches the reference structure.
+- Added original tank detail: darker olive materials, engine-deck grilles, rear
+  stowage, rear boxes, deck bolts, turret cheeks, barrel sleeve, coax detail,
+  cupola ring, and procedural star insignia decals.
+- Added direct-view battlefield set dressing: labeled Normandy-style road
+  signs, extra south-approach stone walls and hedges, another crop field,
+  muted wheat rows, road ruts, gravel, dust patches, and taller/softer smoke
+  columns.
+- Added procedural wall and roof textures plus a taller church tower/belfry/
+  steeple silhouette for a less flat village presentation.
+
+Commands run:
+- `npm version 0.0.6 --no-git-tag-version`
+- `npm run typecheck`
+- `npm run build`
+- `node C:\Users\JHutc\.codex\skills\develop-web-game\scripts\web_game_playwright_client.js ...`
+- Custom Playwright direct-control screenshot/state checks against
+  `http://127.0.0.1:5173/frontline-velocity/`
+
+Results:
+- Typecheck: PASS
+- Build: PASS
+- develop-web-game client smoke: PASS
+- Direct-control screenshot/state check: PASS, no console errors recorded
+- Vite base path remains `/frontline-velocity/`
+
+Blockers / notes:
+- An unrelated untracked `.claude/` directory was present during this pass and
+  was intentionally left untouched.
+- The pass stays legally safe by using original procedural geometry, materials,
+  textures, and UI; it does not import or copy commercial-game assets.
+
+Recommended next step:
+- Continue replacing the remaining primitive vehicle/building/vegetation shapes
+  with authored original meshes or generated original texture atlases for a
+  larger fidelity jump.
+
+Recommended commit message:
+- `Push direct-control tank view closer to reference for v0.0.6`
