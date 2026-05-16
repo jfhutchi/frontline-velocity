@@ -32,15 +32,15 @@ export class CameraController {
       /* no-op */
     }
     this.tactical = new TacticalCameraController(tacticalCam);
-    this.chaseCam = new FollowCamera('directFirstPersonCam', new Vector3(0, 2, -2), scene);
-    this.chaseCam.radius = 2;
-    this.chaseCam.heightOffset = 2;
+    this.chaseCam = new FollowCamera('directChaseCam', new Vector3(0, 6, -9), scene);
+    this.chaseCam.radius = 9;
+    this.chaseCam.heightOffset = 4.8;
     this.chaseCam.rotationOffset = 180;
-    this.chaseCam.cameraAcceleration = 0.18;
+    this.chaseCam.cameraAcceleration = 0.12;
     this.chaseCam.maxCameraSpeed = 180;
-    this.chaseCam.minZ = 0.08;
+    this.chaseCam.minZ = 0.18;
     this.chaseCam.maxZ = 600;
-    this.chaseCam.fov = 1.02;
+    this.chaseCam.fov = 0.82;
     this.tactical.reset(true);
     this.activate('tactical');
   }
@@ -96,32 +96,39 @@ export class CameraController {
     }
   }
 
-  /** Place the active camera at the selected unit's gunner/driver eye-line. */
+  /** Third-person over-the-turret chase camera for direct vehicle control. */
   trackChase(unit: Unit, dt = 1 / 60) {
     if (this.mode !== 'directControl') return;
-    const yaw = unit.rotation + unit.turretRotation * 0.32;
+    const yaw = unit.rotation + unit.turretRotation * 0.22;
     const sin = Math.sin(yaw);
     const cos = Math.cos(yaw);
-    const eyeHeight =
-      unit.type === 'reconJeep' ? 1.8 :
-      unit.type === 'infantry' ? 1.7 :
-      2.75;
-    const forwardOffset =
-      unit.type === 'reconJeep' ? 0.95 :
-      unit.type === 'infantry' ? 0.25 :
-      unit.radius * 0.62;
+    const chaseBack =
+      unit.type === 'reconJeep' ? 5.2 :
+      unit.type === 'heavyTank' ? 5.35 :
+      4.25;
+    const chaseHeight =
+      unit.type === 'reconJeep' ? 3.0 :
+      unit.type === 'heavyTank' ? 3.55 :
+      2.95;
+    const aimHeight =
+      unit.type === 'reconJeep' ? 1.65 :
+      unit.type === 'heavyTank' ? 2.55 :
+      2.2;
+    const targetAhead =
+      unit.type === 'reconJeep' ? 34 :
+      32;
     const shake = this.consumeShake();
     const desiredPosition = new Vector3(
-      unit.position.x + sin * forwardOffset + shake.x,
-      eyeHeight + shake.y,
-      unit.position.z + cos * forwardOffset + shake.z,
+      unit.position.x - sin * chaseBack + shake.x,
+      chaseHeight + shake.y,
+      unit.position.z - cos * chaseBack + shake.z,
     );
     const desiredTarget = new Vector3(
-      unit.position.x + sin * 90,
-      eyeHeight - 0.12,
-      unit.position.z + cos * 90,
+      unit.position.x + sin * targetAhead,
+      aimHeight,
+      unit.position.z + cos * targetAhead,
     );
-    const t = 1 - Math.exp(-Math.max(dt, 1 / 120) * 20);
+    const t = 1 - Math.exp(-Math.max(dt, 1 / 120) * 12);
     this.chasePosition = this.chasePosition ? Vector3.Lerp(this.chasePosition, desiredPosition, t) : desiredPosition;
     this.chaseTarget = this.chaseTarget ? Vector3.Lerp(this.chaseTarget, desiredTarget, t) : desiredTarget;
     this.chaseCam.position.copyFrom(this.chasePosition);

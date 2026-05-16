@@ -41,6 +41,9 @@ function buildDecorations(): MapDecoration[] {
   out.push(deco('road_h3', 'road', 0, 38, 0, { x: roadLength * 0.7, y: 0.05, z: 6 }, 'asphalt'));
   out.push(deco('road_v2', 'road', -42, 0, 0, { x: 6, y: 0.05, z: roadLength * 0.7 }, 'asphalt'));
   out.push(deco('road_v3', 'road', 42, 0, 0, { x: 6, y: 0.05, z: roadLength * 0.7 }, 'asphalt'));
+  out.push(deco('road_south_lane', 'road', -15, 61, -0.38, { x: 7, y: 0.045, z: 88 }, 'asphalt'));
+  out.push(deco('road_east_lane', 'road', 66, 7, 1.18, { x: 6, y: 0.04, z: 72 }, 'dirt'));
+  out.push(deco('road_north_lane', 'road', -34, -66, 0.74, { x: 6, y: 0.04, z: 68 }, 'dirt'));
 
   // Dense central village. Mix of houses, barns, factory, church, and a
   // fortified bunker covering the crossroads. All marked destructible.
@@ -82,6 +85,32 @@ function buildDecorations(): MapDecoration[] {
     );
   });
 
+  const linearDetails: Array<[string, MapDecoration['kind'], number, number, number, number, number, MapDecoration['tint']]> = [
+    ['hedge_west_field', 'hedgerow', -70, 18, 0.1, 48, 2.3, 'shrub'],
+    ['hedge_east_field', 'hedgerow', 70, 20, -0.08, 50, 2.2, 'shrub'],
+    ['hedge_south_left', 'hedgerow', -42, 62, -0.34, 52, 2.1, 'shrub'],
+    ['hedge_south_right', 'hedgerow', 38, 62, 0.24, 48, 2.1, 'shrub'],
+    ['hedge_north_left', 'hedgerow', -52, -50, 0.82, 44, 2.0, 'shrub'],
+    ['hedge_north_right', 'hedgerow', 52, -48, -0.64, 44, 2.0, 'shrub'],
+    ['wall_church_front', 'stoneWall', -30, 14, 0, 20, 1.0, 'stone'],
+    ['wall_church_side', 'stoneWall', -40, 24, Math.PI / 2, 18, 1.0, 'stone'],
+    ['wall_square_west', 'stoneWall', -12, -4, Math.PI / 2, 18, 0.9, 'stone'],
+    ['wall_square_east', 'stoneWall', 12, 4, Math.PI / 2, 18, 0.9, 'stone'],
+    ['wall_south_approach_left', 'stoneWall', -17, 52, Math.PI / 2, 34, 1.0, 'stone'],
+    ['wall_south_approach_right', 'stoneWall', 17, 46, Math.PI / 2, 28, 1.0, 'stone'],
+    ['wall_village_garden', 'stoneWall', -27, 38, 0.12, 22, 0.95, 'stone'],
+    ['hedge_village_road', 'hedgerow', 28, 34, -0.08, 30, 1.8, 'shrub'],
+    ['fence_south_field', 'fence', -57, 78, -0.18, 44, 0.8, 'wood'],
+    ['fence_east_field', 'fence', 78, 50, Math.PI / 2, 42, 0.8, 'wood'],
+    ['fence_west_lane', 'fence', -79, -18, Math.PI / 2, 38, 0.8, 'wood'],
+  ];
+  linearDetails.forEach(([id, kind, x, z, rot, length, width, tint]) => {
+    out.push(deco(id, kind, x, z, rot, { x: length, y: 1.2, z: width }, tint));
+  });
+
+  out.push(deco('roadsign_south', 'roadSign', -20, 58, 0.2, { x: 1, y: 2.2, z: 1 }, 'wood'));
+  out.push(deco('roadsign_crossroads', 'roadSign', 7, 8, -0.35, { x: 1, y: 2, z: 1 }, 'wood'));
+
   // Tree clusters around the perimeter of the city.
   const rng = mulberry32(1337);
   const treeSeed: Array<[number, number, 'pine' | 'oak' | 'shrub']> = [];
@@ -107,6 +136,16 @@ function buildDecorations(): MapDecoration[] {
     const d = 8 + rng() * 14;
     out.push(deco(`field_${i}`, 'fieldPatch', x, z, rng() * Math.PI, { x: w, y: 0.02, z: d }, 'grass'));
   }
+  const setPieceFields: Array<[number, number, number, number, number]> = [
+    [-74, 54, 0.18, 34, 26],
+    [-42, 58, 0.12, 26, 22],
+    [72, 58, -0.28, 32, 24],
+    [-78, -44, 0.44, 30, 22],
+    [78, -52, -0.36, 34, 24],
+  ];
+  setPieceFields.forEach(([x, z, rot, w, d], i) => {
+    out.push(deco(`crop_setpiece_${i}`, 'fieldPatch', x, z, rot, { x: w, y: 0.022, z: d }, 'grass'));
+  });
 
   const hills: Array<[number, number, number]> = [
     [-72, -52, 16],

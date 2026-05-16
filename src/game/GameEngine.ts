@@ -295,6 +295,7 @@ export class GameEngine {
     unit.position.x = Math.max(-MAP_HALF + 2, Math.min(MAP_HALF - 2, newX));
     unit.position.z = Math.max(-MAP_HALF + 2, Math.min(MAP_HALF - 2, newZ));
     resolveUnitAgainstObstacles(unit, this.simulation.state);
+    unit.currentSpeed = Math.abs(this.vehicleVelocity);
 
     // Turret aim: face camera direction. We use the chase camera's yaw.
     // Simpler: just keep turret aligned with hull (turret = 0 in hull-local)
@@ -374,6 +375,7 @@ export class GameEngine {
             a.id !== b.id ||
             a.health !== b.health ||
             a.isDestroyed !== b.isDestroyed ||
+            Math.abs(a.currentSpeed - b.currentSpeed) > 0.1 ||
             Math.abs(a.reloadProgress - b.reloadProgress) > 0.05 ||
             a.orderKind !== b.orderKind ||
             a.targetName !== b.targetName ||
@@ -619,6 +621,7 @@ function toSummary(u: Unit, time: number, units: Map<string, Unit>): UnitSummary
     maxHealth: u.maxHealth,
     armor: u.armor,
     speed: u.speed,
+    currentSpeed: Math.abs(u.currentSpeed),
     weaponName: u.weapon.name,
     weaponRange: u.weapon.range,
     reloadSeconds: u.weapon.reloadSeconds,

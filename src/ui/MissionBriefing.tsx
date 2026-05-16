@@ -10,7 +10,7 @@ export const MissionBriefing: React.FC = () => {
   const returnToMenu = useGameStore((s) => s.returnToMenu);
 
   return (
-    <div className="briefing-screen">
+    <div className="briefing-screen" data-ui-interactive="true">
       <div className="briefing-card">
         <h1>{MISSION.briefingTitle}</h1>
         <h3>Situation</h3>
@@ -52,7 +52,7 @@ export const MissionBriefing: React.FC = () => {
               startMission();
             }}
           >
-            Deploy
+            Start Mission
           </button>
         </div>
       </div>

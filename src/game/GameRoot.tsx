@@ -102,7 +102,7 @@ export const GameRoot: React.FC = () => {
         }
       }
 
-      if (k === 'r' && store.screen === 'directControl') {
+      if ((k === 'r' || k === 'tab') && store.screen === 'directControl') {
         engine.exitDirectControl();
         ev.preventDefault();
         return;
@@ -220,7 +220,7 @@ export const GameRoot: React.FC = () => {
             }}
           />
         )}
-        {ready && (screen === 'tactical' || screen === 'directControl') && <ControlsHelp mode={screen} />}
+        {ready && screen === 'tactical' && <ControlsHelp mode={screen} />}
         {ready && screen === 'tactical' && !paused && isTouchDevice() && (
           <MobileTacticalControls engine={engineRef.current} />
         )}

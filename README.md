@@ -5,7 +5,58 @@ armored platoon trying to capture a defended village crossroads. Issue
 attack-move orders from the tactical command view, then jump into a vehicle and
 fight directly from a third-person combat camera.
 
-**Current version: v0.0.4 — expanded Crossroads, destructible city, minimap**
+**Current version: v0.0.6 - reference tank-view push**
+
+## What's new in v0.0.6
+
+v0.0.6 is a focused direct-control visual push toward the uploaded
+over-the-turret tank reference, with the main menu version incremented for this
+push.
+
+- Tightened the direct-control chase camera so the tank fills the foreground
+  more aggressively while keeping the road and village readable ahead.
+- Added more original tank detailing: darker olive materials, engine grilles,
+  rear stowage, deck bolts, turret cheeks, barrel sleeve, coax detail, cupola
+  ring, and original star insignia decals.
+- Added reference-specific rural set dressing: labeled road signs, extra
+  south-approach stone walls and hedges, another crop field near the approach,
+  muted wheat rows, road ruts, gravel, dust patches, and taller smoke columns.
+- Reworked village materials with procedural wall and roof textures so houses,
+  barns, and the church read less like flat colored boxes.
+- Strengthened the church silhouette with a taller tower, belfry, steeple, and
+  arch openings for the direct-control village view.
+- Cleaned the direct-control HUD closer to the reference by removing the extra
+  top unit-status box and changing Return to Command to use `Tab` while keeping
+  `R` as a compatibility shortcut.
+
+## What's new in v0.0.5
+
+v0.0.5 is a desktop-first visual, HUD, and camera pass aimed at closing the
+gap to the uploaded tactical RTS and direct-control tank reference images.
+
+- Fixed the mobile mission briefing blocker: portrait players can scroll the
+  briefing, reach Back, and press Start Mission without rotating the device.
+- Tactical camera reset now frames the village crossroads from a higher RTS
+  command angle with the objective, roads, fields, and approach lanes visible.
+- Direct-control mode now uses a third-person over-the-turret chase camera;
+  the controlled tank remains visible in the foreground with turret, barrel,
+  hull, tracks, and stowage details.
+- Tactical battlefield detail pass: added hedgerows, stone walls, fences, road
+  signs, extra approach lanes, set-piece crop fields, barricades, wreck debris,
+  stronger smoke columns, muted terrain colors, and more grounded building
+  facade details.
+- Tank silhouettes are heavier and more readable: side skirts, road wheels,
+  tread blocks, glacis plates, rear decks, stowage, mantlets, cupolas, hatches,
+  and muzzle brakes are built from original procedural geometry.
+- HUD pass: tactical roster bars remain clipped in dedicated rows, direct
+  control now shows health/reload/speed meters, the return-to-command button
+  sits as its own bottom-right control, and direct-control help clutter is
+  removed from the tank view.
+- Validation for this pass included `npm install`, repeated `npm run typecheck`
+  and `npm run build`, the develop-web-game Playwright client, mobile briefing
+  scroll/start verification, tactical screenshots, direct-control screenshots,
+  and a controls preservation script covering selection, control group recall,
+  right-click order, direct-control entry, drive/fire, and return to tactical.
 
 ## What's new in v0.0.4
 
@@ -229,7 +280,7 @@ summary snapshots from Zustand instead of updating every render frame.
 
 ## Known limitations
 
-- Mobile controls are deferred and not optimized in v0.0.3; touch tap-select
+- Mobile tactical/gameplay controls are deferred and not optimized in v0.0.6; touch tap-select
   and two-finger pan/pinch still work but no further mobile polish was done.
 - Pathing uses simple obstacle-aware waypoints rather than a full navmesh, so
   tight village spaces can still produce imperfect routes.
@@ -237,6 +288,10 @@ summary snapshots from Zustand instead of updating every render frame.
 - Direct control still uses a third-person chase camera and hull-aligned
   turret behavior; first-person interiors and mouse turret aim remain future
   work.
+- Visuals are still original procedural geometry/materials rather than
+  authored high-poly meshes and texture atlases, so the v0.0.6 reference pass
+  improves composition and art direction without importing or copying
+  commercial-game assets.
 - Box selection projects unit positions to screen space and ignores models
   partially obscured behind terrain or buildings; very small units at extreme
   zoom-out may need a slightly wider drag.
@@ -250,11 +305,11 @@ summary snapshots from Zustand instead of updating every render frame.
 
 ## Roadmap
 
-- v0.0.5 — full navmesh pathing in the dense town, real animated unit
+- v0.0.7 — full navmesh pathing in the dense town, real animated unit
   models (legged infantry, recoil on turret), wider building damage
   states (smoked, on-fire, partial-collapse), additional mission with
   multi-zone control, mission-select shell.
-- v0.0.6 — second campaign mission, dynamic weather (rain / dust kicked
+- v0.0.8 — second campaign mission, dynamic weather (rain / dust kicked
   up by vehicles), unit veterancy, saveable settings.
 - v0.1.0 — campaign shell with save progression, persistent unit roster,
   and a small in-mission tutorial overlay.

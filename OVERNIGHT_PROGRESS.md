@@ -204,6 +204,140 @@ Recommended commit message:
 
 ---
 
+# v0.0.3 Art-Reference Pass - 2026-05-16
+
+## Phase 1 - Inspect Current State (DONE)
+
+- Branch: `version/v0.0.3-codex-art-direction-pass`
+- Initial git state: clean before edits.
+- `package.json` name already `frontline-velocity`; no rename needed.
+- Vite base path verified: `/frontline-velocity/`.
+- Baseline commands:
+  - `npm install` - PASS
+  - `npm run typecheck` - PASS
+  - `npm run build` - PASS
+- Current implementation findings:
+  - Tactical camera: `src/game/rendering/TacticalCameraController.ts`, wrapped by `CameraController`.
+  - Direct-control camera: `src/game/rendering/CameraController.ts`; currently chase mode but still too close to gunner/first-person framing.
+  - Selection/input/orders: `TacticalInputController`, `SelectionController`, `CommandController`, `PointerWorldResolver`.
+  - Move / attack-move / attack orders: `Simulation.issueMoveOrder`, `Simulation.issueAttackOrder`, `CommandController`.
+  - Autonomous targeting: `AISystem`, `CombatSystem`, and enemy GOAP files under `src/game/simulation/ai`.
+  - HUD roster/objective/unit/minimap/direct-control UI: `src/ui/*` plus `src/styles/global.css`.
+  - World health bars/unit meshes: `UnitRenderer`.
+  - Terrain/building/tree generation: `operationCrossroads` decorations and `TerrainRenderer`.
+  - Mission briefing blocker: global no-scroll/touch rules plus unscrollable `.briefing-screen` layout.
+
+## Phase 2 - Mobile Mission Briefing Scroll / Start Bug (DONE)
+
+- Files changed:
+  - `src/ui/MissionBriefing.tsx`
+  - `src/styles/global.css`
+- What changed:
+  - Made the briefing screen the scroll container with `100dvh`, `overflow-y: auto`, safe-area padding, and touch panning.
+  - Kept gameplay no-scroll/touch blocking scoped to `.game-root` and the canvas.
+  - Changed the deploy button label to `Start Mission` to match the requested navigation affordance.
+  - Added mobile-specific briefing-card/action layout so Back and Start Mission remain reachable in portrait.
+- Commands:
+  - `npm run typecheck` - PASS
+  - `npm run build` - PASS
+- Blockers: none.
+- Next step: tactical desktop camera/HUD and art-reference pass.
+
+## Phase 3-4 - Tactical Camera / HUD / Health Bars (DONE)
+
+- Files changed:
+  - `src/game/constants.ts`
+  - `src/game/GameEngine.ts`
+  - `src/game/state/gameStore.ts`
+  - `src/ui/DirectControlHUD.tsx`
+  - `src/styles/global.css`
+- What changed:
+  - Tactical reset camera now frames the village crossroads from a higher RTS command angle.
+  - Existing RTS controls were preserved: left-click select, Shift selection, box select, right-click move/attack, edge scroll, MMB pan, wheel zoom, Q/E rotate, R/Home reset, F center, WASD/arrows, Shift fast pan, control groups, and Esc clear/pause.
+  - Roster health bars remain in dedicated clipped rows; direct-control HUD now receives live current-speed data.
+  - HUD panels were tightened with cooler translucent borders and less direct-control clutter.
+- Commands:
+  - `npm run typecheck` - PASS
+  - `npm run build` - PASS
+- Blockers: none.
+
+## Phase 5 - Tactical Battlefield Art Direction (DONE)
+
+- Files changed:
+  - `src/game/types.ts`
+  - `src/game/constants.ts`
+  - `src/game/missions/operationCrossroads.ts`
+  - `src/game/rendering/TerrainRenderer.ts`
+  - `src/game/rendering/UnitRenderer.ts`
+  - `src/game/rendering/BabylonScene.ts`
+- What changed:
+  - Added original procedural decoration kinds for hedgerows, stone walls, fences, and road signs.
+  - Expanded the crossroads map with extra approach lanes, set-piece crop fields, hedgerow field boundaries, stone walls, fences, barricades, static wreck debris, and road signage.
+  - Building treatment now has stronger pitched roofs, foundations, lintels, sills, dormers, facade trim, and more muted wartime materials.
+  - Tanks now have side skirts, road wheels, tread blocks, glacis plates, rear decks, stowage, mantlets, cupolas, hatches, and muzzle brakes.
+  - Lighting, fog, vignette, sky, smoke columns, and battlefield color palette were tuned toward a less toy-like rural battlefield.
+- Commands:
+  - `npm run typecheck` - PASS
+  - `npm run build` - PASS
+- Blockers: none.
+
+## Phase 6 - Direct-Control Camera / HUD (DONE)
+
+- Files changed:
+  - `src/game/rendering/CameraController.ts`
+  - `src/game/rendering/UnitRenderer.ts`
+  - `src/game/GameRoot.tsx`
+  - `src/ui/DirectControlHUD.tsx`
+  - `src/styles/global.css`
+- What changed:
+  - Direct-control camera is now a third-person over-the-turret chase camera.
+  - The controlled tank remains visible instead of being hidden by the renderer.
+  - Direct-control HUD now has health/reload/speed meters, a cleaner reticle, circular minimap, top compass/objective readout, and a separate bottom-right Return to Command button.
+  - Removed collapsible controls help from direct-control mode so it no longer competes with the tank HUD.
+- Commands:
+  - `npm run typecheck` - PASS
+  - `npm run build` - PASS
+- Blockers: none.
+
+## Phase 7 - AI / Attack-Move Preservation (DONE)
+
+- Gameplay behavior was preserved rather than redesigned.
+- Playwright controls preservation script verified selection, control-group assign/recall, right-click move/order, direct-control entry, drive/fire input, and return to tactical.
+- Captured state after return showed screen `tactical`, controlled unit cleared, selected unit preserved, move/attack engagement continuing, and no console/page errors.
+
+## Phase 8-9 - Version / README / Final Pass (DONE)
+
+- Files changed:
+  - `package.json`
+  - `package-lock.json`
+  - `src/version.ts`
+  - `src/ui/MainMenu.tsx`
+  - `README.md`
+  - `OVERNIGHT_PROGRESS.md`
+  - `progress.md`
+- What changed:
+  - Version bumped for this push: `0.0.5` in `package.json` / `package-lock.json`, `v0.0.5` in `src/version.ts`, and visible main-menu label updated.
+  - README now documents the v0.0.5 art-reference RTS/tank pass, controls, mobile briefing fix, GitHub Pages base path, and local validation commands.
+  - Main menu About copy now describes the art-reference pass instead of only the prior v0.0.4 content push.
+- Playwright/manual visual checks:
+  - develop-web-game client smoke screenshot - PASS
+  - Mobile 375x667 briefing scroll-to-bottom and Start Mission - PASS
+  - Desktop tactical screenshot - PASS
+  - Desktop direct-control screenshot - PASS
+  - Controls preservation script - PASS, no console/page errors
+- Final commands:
+  - `npm run typecheck` - PASS
+  - `npm run build` - PASS
+- Remaining limitations:
+  - Procedural geometry cannot fully match bespoke AAA assets, but the current pass materially improves composition, density, HUD structure, tank silhouette, and atmosphere while staying legally safe and build-stable.
+  - Mobile tactical gameplay controls remain deferred by request; mobile briefing/menu navigation works.
+- Recommended next step:
+  - Merge or push this branch after review, then continue with mesh/texture authoring and better sky/vegetation rendering in a dedicated v0.0.6 pass.
+- Recommended commit message:
+  - `Overhaul desktop RTS controls, HUD, mobile briefing, and art direction for v0.0.5`
+
+---
+
 # v0.0.4 Content & Graphics Push
 
 ## User request (verbatim)
@@ -351,3 +485,75 @@ after merge).
 No Pages-breaking issues found. No source, workflow, or config changes
 were made during this verification pass. No commit created.
 
+---
+
+## 2026-05-16 v0.0.6 Reference Tank-View Push
+
+Phase:
+- Direct-control visual/reference pass after user requested the tank-view graphics
+  be pushed closer to the uploaded reference.
+
+Files changed:
+- `package.json`
+- `package-lock.json`
+- `README.md`
+- `progress.md`
+- `OVERNIGHT_PROGRESS.md`
+- `src/version.ts`
+- `src/game/constants.ts`
+- `src/game/GameRoot.tsx`
+- `src/game/missions/operationCrossroads.ts`
+- `src/game/rendering/BabylonScene.ts`
+- `src/game/rendering/CameraController.ts`
+- `src/game/rendering/TerrainRenderer.ts`
+- `src/game/rendering/UnitRenderer.ts`
+- `src/ui/DirectControlHUD.tsx`
+
+What changed:
+- Version bumped for this push: `0.0.6` in `package.json` /
+  `package-lock.json`, `v0.0.6` in `src/version.ts`, and main menu label
+  updated to `Reference Tank-View Push`.
+- Direct-control camera lowered and moved closer to the controlled vehicle so
+  the tank fills the foreground more like the uploaded tank-view reference.
+- Direct-control HUD now uses `Return to Command (Tab)` and the global key
+  handler accepts `Tab` in direct-control mode while preserving `R`.
+- Removed the extra direct-control top unit-status panel so the HUD more
+  closely matches the reference structure.
+- Added original tank detail: darker olive materials, engine-deck grilles, rear
+  stowage, rear boxes, deck bolts, turret cheeks, barrel sleeve, coax detail,
+  cupola ring, and procedural star insignia decals.
+- Added direct-view battlefield set dressing: labeled Normandy-style road
+  signs, extra south-approach stone walls and hedges, another crop field,
+  muted wheat rows, road ruts, gravel, dust patches, and taller/softer smoke
+  columns.
+- Added procedural wall and roof textures plus a taller church tower/belfry/
+  steeple silhouette for a less flat village presentation.
+
+Commands run:
+- `npm version 0.0.6 --no-git-tag-version`
+- `npm run typecheck`
+- `npm run build`
+- `node C:\Users\JHutc\.codex\skills\develop-web-game\scripts\web_game_playwright_client.js ...`
+- Custom Playwright direct-control screenshot/state checks against
+  `http://127.0.0.1:5173/frontline-velocity/`
+
+Results:
+- Typecheck: PASS
+- Build: PASS
+- develop-web-game client smoke: PASS
+- Direct-control screenshot/state check: PASS, no console errors recorded
+- Vite base path remains `/frontline-velocity/`
+
+Blockers / notes:
+- An unrelated untracked `.claude/` directory was present during this pass and
+  was intentionally left untouched.
+- The pass stays legally safe by using original procedural geometry, materials,
+  textures, and UI; it does not import or copy commercial-game assets.
+
+Recommended next step:
+- Continue replacing the remaining primitive vehicle/building/vegetation shapes
+  with authored original meshes or generated original texture atlases for a
+  larger fidelity jump.
+
+Recommended commit message:
+- `Push direct-control tank view closer to reference for v0.0.6`
