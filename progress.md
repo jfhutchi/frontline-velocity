@@ -13,6 +13,13 @@ Progress:
 TODO:
 - Commit, push, and open a draft PR if local GitHub credentials are available.
 
+2026-05-16 art-reference pass:
+- Started the requested `version/v0.0.3-codex-art-direction-pass` branch from a clean worktree.
+- Baseline `npm install`, `npm run typecheck`, and `npm run build` passed; Vite base remains `/frontline-velocity/`.
+- Fixed the mobile mission briefing blocker by making the briefing screen scroll independently with dynamic viewport height, safe-area padding, and touch panning while keeping gameplay touch blocking on `.game-root` / canvas.
+- Renamed the briefing CTA from `Deploy` to `Start Mission`.
+- Phase 2 validation: `npm run typecheck` PASS, `npm run build` PASS.
+
 2026-05-15 follow-up pass:
 - Starting a mobile/camera/UI/graphics polish pass from the user prompt: "The state of this game is a bit bad. It doesn't work on mobile browsers and the camera controls are bad the ui is bad and I want the graphics to be a lot better"
 - Inspection found touch tactical mode only supported tap and two-finger pan/pinch, with no touch-first command/camera surface; HUD panels also crowd small screens.

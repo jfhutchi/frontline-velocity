@@ -204,6 +204,47 @@ Recommended commit message:
 
 ---
 
+# v0.0.3 Art-Reference Pass - 2026-05-16
+
+## Phase 1 - Inspect Current State (DONE)
+
+- Branch: `version/v0.0.3-codex-art-direction-pass`
+- Initial git state: clean before edits.
+- `package.json` name already `frontline-velocity`; no rename needed.
+- Vite base path verified: `/frontline-velocity/`.
+- Baseline commands:
+  - `npm install` - PASS
+  - `npm run typecheck` - PASS
+  - `npm run build` - PASS
+- Current implementation findings:
+  - Tactical camera: `src/game/rendering/TacticalCameraController.ts`, wrapped by `CameraController`.
+  - Direct-control camera: `src/game/rendering/CameraController.ts`; currently chase mode but still too close to gunner/first-person framing.
+  - Selection/input/orders: `TacticalInputController`, `SelectionController`, `CommandController`, `PointerWorldResolver`.
+  - Move / attack-move / attack orders: `Simulation.issueMoveOrder`, `Simulation.issueAttackOrder`, `CommandController`.
+  - Autonomous targeting: `AISystem`, `CombatSystem`, and enemy GOAP files under `src/game/simulation/ai`.
+  - HUD roster/objective/unit/minimap/direct-control UI: `src/ui/*` plus `src/styles/global.css`.
+  - World health bars/unit meshes: `UnitRenderer`.
+  - Terrain/building/tree generation: `operationCrossroads` decorations and `TerrainRenderer`.
+  - Mission briefing blocker: global no-scroll/touch rules plus unscrollable `.briefing-screen` layout.
+
+## Phase 2 - Mobile Mission Briefing Scroll / Start Bug (DONE)
+
+- Files changed:
+  - `src/ui/MissionBriefing.tsx`
+  - `src/styles/global.css`
+- What changed:
+  - Made the briefing screen the scroll container with `100dvh`, `overflow-y: auto`, safe-area padding, and touch panning.
+  - Kept gameplay no-scroll/touch blocking scoped to `.game-root` and the canvas.
+  - Changed the deploy button label to `Start Mission` to match the requested navigation affordance.
+  - Added mobile-specific briefing-card/action layout so Back and Start Mission remain reachable in portrait.
+- Commands:
+  - `npm run typecheck` - PASS
+  - `npm run build` - PASS
+- Blockers: none.
+- Next step: tactical desktop camera/HUD and art-reference pass.
+
+---
+
 # v0.0.4 Content & Graphics Push
 
 ## User request (verbatim)
@@ -350,4 +391,3 @@ after merge).
 
 No Pages-breaking issues found. No source, workflow, or config changes
 were made during this verification pass. No commit created.
-

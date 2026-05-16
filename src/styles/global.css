@@ -34,7 +34,6 @@ body,
   color: var(--fg-0);
   font-family: var(--font-sans);
   overflow: hidden;
-  touch-action: none;
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
   -webkit-user-select: none;
@@ -86,6 +85,7 @@ button.danger {
   inset: 0;
   width: 100vw;
   height: 100vh;
+  min-height: 100dvh;
   background:
     radial-gradient(circle at 50% 18%, rgba(83, 105, 70, 0.34) 0%, transparent 42%),
     linear-gradient(180deg, #0b1110 0%, #060806 100%);
@@ -141,6 +141,18 @@ button.danger {
   padding: 24px;
   text-align: center;
 }
+
+.briefing-screen {
+  min-height: 100dvh;
+  max-height: 100dvh;
+  justify-content: flex-start;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  padding-top: max(24px, env(safe-area-inset-top));
+  padding-bottom: max(32px, env(safe-area-inset-bottom));
+}
 .menu-screen h1,
 .briefing-screen h1,
 .end-screen h1 {
@@ -184,6 +196,7 @@ button.danger {
   text-align: left;
   border-radius: 4px;
   box-shadow: var(--hud-shadow);
+  margin: auto 0;
 }
 .briefing-screen .briefing-card h3 {
   margin: 16px 0 8px;
@@ -201,6 +214,7 @@ button.danger {
   gap: 12px;
   justify-content: flex-end;
   margin-top: 24px;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
 }
 
 /* ---------- Game canvas ---------- */
@@ -208,6 +222,8 @@ button.danger {
 .game-root {
   position: absolute;
   inset: 0;
+  touch-action: none;
+  overscroll-behavior: none;
 }
 
 .babylon-canvas {
@@ -1407,6 +1423,37 @@ button.danger {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+}
+
+@media (max-width: 768px) {
+  .briefing-screen {
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(36px, env(safe-area-inset-bottom));
+  }
+  .briefing-screen .briefing-card {
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    overflow: visible;
+    margin: 0;
+    padding: 18px;
+  }
+  .briefing-screen .briefing-card h1 {
+    font-size: clamp(24px, 9vw, 36px);
+    letter-spacing: 0.1em;
+  }
+  .briefing-screen .briefing-actions {
+    position: relative;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 24px;
+    padding-bottom: max(36px, env(safe-area-inset-bottom));
+  }
+  .briefing-screen .briefing-actions button {
+    width: 100%;
   }
 }
 
