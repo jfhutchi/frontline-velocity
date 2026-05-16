@@ -14,6 +14,7 @@
   --objective: #ffd261;
   --panel-bg: rgba(7, 11, 10, 0.76);
   --panel-border: rgba(198, 174, 116, 0.34);
+  --panel-border-cool: rgba(190, 205, 185, 0.22);
   --hud-shadow: 0 4px 24px rgba(0, 0, 0, 0.55);
   --font-mono: ui-monospace, 'Cascadia Mono', 'Consolas', 'Menlo', monospace;
   --font-sans: 'Bahnschrift', 'Aptos', 'Segoe UI', system-ui, sans-serif;
@@ -263,12 +264,14 @@ button.danger {
 }
 
 .objective-panel {
-  background: linear-gradient(180deg, rgba(14, 21, 18, 0.86), rgba(8, 12, 11, 0.76));
-  border: 1px solid var(--panel-border);
-  padding: 10px 14px;
-  border-radius: 5px;
-  min-width: 220px;
-  max-width: 280px;
+  background:
+    linear-gradient(90deg, rgba(218, 190, 112, 0.06), transparent 38%),
+    linear-gradient(180deg, rgba(13, 18, 16, 0.84), rgba(5, 8, 7, 0.7));
+  border: 1px solid var(--panel-border-cool);
+  padding: 11px 15px 12px;
+  border-radius: 3px;
+  min-width: 250px;
+  max-width: 312px;
   box-shadow: var(--hud-shadow);
 }
 .objective-panel h4 {
@@ -296,14 +299,17 @@ button.danger {
 
 .tactical-controls {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   flex-wrap: wrap;
   justify-content: flex-end;
   max-width: min(760px, calc(100vw - 330px));
 }
 .tactical-controls button {
-  padding: 6px 10px;
-  font-size: 12px;
+  padding: 7px 13px;
+  font-size: 11px;
+  min-width: 82px;
+  background: linear-gradient(180deg, rgba(20, 26, 23, 0.88), rgba(8, 12, 10, 0.88));
+  border-color: var(--panel-border-cool);
 }
 
 .unit-panel {
@@ -460,12 +466,12 @@ button.danger {
 
 .unit-roster {
   position: absolute;
-  top: 90px;
+  top: 128px;
   left: 12px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  width: 220px;
+  gap: 5px;
+  width: 242px;
 }
 .unit-roster .roster-group-header {
   font-family: var(--font-mono);
@@ -488,15 +494,17 @@ button.danger {
   gap: 4px;
   width: 100%;
   min-height: 44px;
-  padding: 5px 8px;
+  padding: 6px 9px;
   font-family: var(--font-mono);
   font-size: 11px;
   text-align: left;
   text-transform: none;
   letter-spacing: normal;
-  background: linear-gradient(180deg, rgba(23, 31, 27, 0.86), rgba(10, 14, 12, 0.82));
-  border: 1px solid var(--panel-border);
-  border-radius: 4px;
+  background:
+    linear-gradient(90deg, rgba(220, 220, 190, 0.045), transparent 18%),
+    linear-gradient(180deg, rgba(16, 22, 19, 0.9), rgba(6, 10, 8, 0.86));
+  border: 1px solid var(--panel-border-cool);
+  border-radius: 2px;
 }
 .unit-roster .unit-row.primary {
   border-color: var(--accent);
@@ -544,9 +552,9 @@ button.danger {
   position: relative;
   flex: 0 0 auto;
   width: 100%;
-  height: 6px;
+  height: 7px;
   margin-top: 0;
-  background: rgba(0, 0, 0, 0.72);
+  background: rgba(0, 0, 0, 0.76);
   border: 1px solid rgba(0, 0, 0, 0.88);
   border-radius: 1px;
   overflow: hidden;
@@ -718,7 +726,7 @@ button.danger {
   width: 208px;
   padding: 8px 10px 10px;
   background: linear-gradient(180deg, rgba(14, 21, 18, 0.86), rgba(8, 12, 11, 0.76));
-  border: 1px solid var(--panel-border);
+  border: 1px solid var(--panel-border-cool);
   border-radius: 5px;
   font-family: var(--font-mono);
   color: var(--fg-1);
@@ -1037,10 +1045,10 @@ button.danger {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 16px;
-  height: 16px;
-  margin: -8px 0 0 -8px;
-  border: 1.5px solid rgba(255, 220, 120, 0.85);
+  width: 28px;
+  height: 28px;
+  margin: -14px 0 0 -14px;
+  border: 1.5px solid rgba(234, 239, 220, 0.85);
   border-radius: 50%;
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
 }
@@ -1048,21 +1056,41 @@ button.danger {
 .dc-crosshair::after {
   content: '';
   position: absolute;
-  background: rgba(255, 220, 120, 0.85);
+  background: rgba(234, 239, 220, 0.85);
 }
 .dc-crosshair::before {
-  width: 1.5px;
-  height: 6px;
+  width: 1px;
+  height: 18px;
   left: 50%;
-  top: -8px;
+  top: -28px;
   margin-left: -1px;
 }
 .dc-crosshair::after {
-  width: 6px;
-  height: 1.5px;
+  width: 18px;
+  height: 1px;
   top: 50%;
-  left: -8px;
+  left: -28px;
   margin-top: -1px;
+}
+.dc-hud::before,
+.dc-hud::after {
+  content: '';
+  position: absolute;
+  top: calc(50% - 40px);
+  width: 42px;
+  height: 80px;
+  border: 2px solid rgba(93, 180, 77, 0.7);
+  pointer-events: none;
+}
+.dc-hud::before {
+  left: calc(50% - 76px);
+  border-right: 0;
+  border-radius: 42px 0 0 42px;
+}
+.dc-hud::after {
+  right: calc(50% - 76px);
+  border-left: 0;
+  border-radius: 0 42px 42px 0;
 }
 
 .dc-reload-ring {
@@ -1090,11 +1118,11 @@ button.danger {
   left: 50%;
   transform: translateX(-50%);
   background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
-  padding: 8px 16px;
+  border: 1px solid var(--panel-border-cool);
+  padding: 10px 16px;
   border-radius: 3px;
   display: flex;
-  gap: 18px;
+  gap: 24px;
   font-family: var(--font-mono);
   font-size: 12px;
   pointer-events: auto;
@@ -1102,8 +1130,8 @@ button.danger {
 .dc-bottom-panel .stat {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  min-width: 78px;
+  align-items: flex-start;
+  min-width: 116px;
 }
 .dc-bottom-panel .stat .label {
   font-size: 10px;
@@ -1114,6 +1142,7 @@ button.danger {
 .dc-bottom-panel .stat .value {
   font-size: 14px;
   color: var(--accent);
+  text-transform: uppercase;
 }
 .dc-bottom-panel .stat .value.low {
   color: var(--danger);
@@ -1121,8 +1150,30 @@ button.danger {
 .dc-bottom-panel .stat .value.warm {
   color: var(--accent-warm);
 }
-.dc-bottom-panel .return-btn {
-  align-self: center;
+.dc-hud > .return-btn {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  min-width: 230px;
+  min-height: 54px;
+  border-color: rgba(238, 200, 112, 0.72);
+  background: linear-gradient(180deg, rgba(38, 32, 20, 0.86), rgba(12, 11, 9, 0.88));
+  pointer-events: auto;
+}
+.dc-meter {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 7px;
+  margin-top: 5px;
+  background: rgba(0, 0, 0, 0.62);
+  border: 1px solid rgba(238, 238, 218, 0.14);
+  overflow: hidden;
+}
+.dc-meter span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #bde887);
 }
 
 .dc-hud .minimap {
@@ -1409,7 +1460,7 @@ button.danger {
   .dc-bottom-panel .stat {
     min-width: 56px;
   }
-  .dc-bottom-panel .return-btn {
+  .dc-hud > .return-btn {
     display: none;
   }
   .dc-objective-panel,

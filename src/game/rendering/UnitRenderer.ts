@@ -58,10 +58,12 @@ export class UnitRenderer {
     };
     mk('friendlyHull', COLOR.friendlyHull);
     mk('friendlyTurret', COLOR.friendlyTurret);
-    mk('friendlyMarker', COLOR.friendlyMarker);
+    const friendlyMarker = mk('friendlyMarker', COLOR.friendlyMarker);
+    friendlyMarker.alpha = 0.28;
     mk('enemyHull', COLOR.enemyHull);
     mk('enemyTurret', COLOR.enemyTurret);
-    mk('enemyMarker', COLOR.enemyMarker);
+    const enemyMarker = mk('enemyMarker', COLOR.enemyMarker);
+    enemyMarker.alpha = 0.22;
     mk('track', { r: 0.08, g: 0.08, b: 0.075 });
     mk('rubber', { r: 0.045, g: 0.045, b: 0.045 });
     mk('glass', { r: 0.28, g: 0.42, b: 0.46 });
@@ -123,23 +125,52 @@ export class UnitRenderer {
         for (const x of [-1.9 * scale, 1.9 * scale]) {
           const track = this.mesh(`track_${unit.id}_${x}`, MeshBuilder.CreateBox(`track_${unit.id}_${x}`, { width: 0.55 * scale, height: 0.58 * scale, depth: 4.55 * scale }, this.scene), this.materials.track, root);
           track.position = new Vector3(x, 0.42 * scale, 0);
-          for (const z of [-1.55, -0.55, 0.55, 1.55]) {
+          const skirt = this.mesh(`skirt_${unit.id}_${x}`, MeshBuilder.CreateBox(`skirt_${unit.id}_${x}`, { width: 0.18 * scale, height: 0.48 * scale, depth: 4.75 * scale }, this.scene), hullMat, root);
+          skirt.position = new Vector3(x * 0.96, 0.78 * scale, -0.05 * scale);
+          skirt.rotation.z = x < 0 ? -0.06 : 0.06;
+          for (const z of [-1.85, -1.22, -0.58, 0.08, 0.74, 1.4, 1.95]) {
             const block = this.mesh(`tread_${unit.id}_${x}_${z}`, MeshBuilder.CreateBox(`tread_${unit.id}_${x}_${z}`, { width: 0.62 * scale, height: 0.12 * scale, depth: 0.42 * scale }, this.scene), this.materials.rubber, root);
             block.position = new Vector3(x, 0.16 * scale, z * scale);
+          }
+          for (const z of [-1.55, -0.78, 0, 0.78, 1.55]) {
+            const wheel = this.mesh(`roadwheel_${unit.id}_${x}_${z}`, MeshBuilder.CreateCylinder(`roadwheel_${unit.id}_${x}_${z}`, { diameter: 0.48 * scale, height: 0.14 * scale, tessellation: 12 }, this.scene), this.materials.gunMetal, root);
+            wheel.rotation.z = Math.PI / 2;
+            wheel.position = new Vector3(x, 0.46 * scale, z * scale);
           }
         }
 
         const nose = this.mesh(`front_${unit.id}`, MeshBuilder.CreateBox(`front_${unit.id}`, { width: 1.1 * scale, height: 0.16 * scale, depth: 0.18 * scale }, this.scene), markerMat, root);
         nose.position = new Vector3(0, 1.25 * scale, 2.22 * scale);
+        const glacis = this.mesh(`glacis_${unit.id}`, MeshBuilder.CreateBox(`glacis_${unit.id}`, { width: 2.5 * scale, height: 0.22 * scale, depth: 1.15 * scale }, this.scene), hullMat, root);
+        glacis.position = new Vector3(0, 1.26 * scale, 1.34 * scale);
+        glacis.rotation.x = -0.22;
+        const rearDeck = this.mesh(`rearDeck_${unit.id}`, MeshBuilder.CreateBox(`rearDeck_${unit.id}`, { width: 2.35 * scale, height: 0.14 * scale, depth: 1.2 * scale }, this.scene), this.materials.gunMetal, root);
+        rearDeck.position = new Vector3(0, 1.56 * scale, -1.42 * scale);
+        for (const x of [-0.78, 0, 0.78]) {
+          const pack = this.mesh(`stowage_${unit.id}_${x}`, MeshBuilder.CreateBox(`stowage_${unit.id}_${x}`, { width: 0.52 * scale, height: 0.34 * scale, depth: 0.74 * scale }, this.scene), this.materials.soldier, root);
+          pack.position = new Vector3(x * scale, 1.54 * scale, -2.1 * scale);
+          pack.rotation.x = 0.08;
+        }
 
         turretPivot = new TransformNode(`turretPivot_${unit.id}`, this.scene);
         turretPivot.parent = root;
         turretPivot.position.y = 1.68 * scale;
         this.mesh(`turretBase_${unit.id}`, MeshBuilder.CreateCylinder(`turretBase_${unit.id}`, { diameter: 1.85 * scale, height: 0.72 * scale, tessellation: 10 }, this.scene), turretMat, turretPivot);
+        const mantlet = this.mesh(`mantlet_${unit.id}`, MeshBuilder.CreateBox(`mantlet_${unit.id}`, { width: 0.9 * scale, height: 0.5 * scale, depth: 0.34 * scale }, this.scene), this.materials.gunMetal, turretPivot);
+        mantlet.position = new Vector3(0, 0.02 * scale, 0.8 * scale);
         const barrel = this.mesh(`barrel_${unit.id}`, MeshBuilder.CreateCylinder(`barrel_${unit.id}`, { diameter: 0.22 * scale, height: 3.0 * scale, tessellation: 8 }, this.scene), this.materials.gunMetal, turretPivot);
         barrel.rotation.x = Math.PI / 2;
         barrel.position.z = 1.95 * scale;
         barrel.position.y = 0.05 * scale;
+        const muzzle = this.mesh(`muzzle_${unit.id}`, MeshBuilder.CreateCylinder(`muzzle_${unit.id}`, { diameter: 0.32 * scale, height: 0.28 * scale, tessellation: 10 }, this.scene), this.materials.gunMetal, turretPivot);
+        muzzle.rotation.x = Math.PI / 2;
+        muzzle.position.z = 3.48 * scale;
+        muzzle.position.y = 0.05 * scale;
+        const cupola = this.mesh(`cupola_${unit.id}`, MeshBuilder.CreateCylinder(`cupola_${unit.id}`, { diameter: 0.62 * scale, height: 0.32 * scale, tessellation: 10 }, this.scene), turretMat, turretPivot);
+        cupola.position = new Vector3(-0.34 * scale, 0.52 * scale, -0.18 * scale);
+        const hatch = this.mesh(`hatch_${unit.id}`, MeshBuilder.CreateBox(`hatch_${unit.id}`, { width: 0.62 * scale, height: 0.08 * scale, depth: 0.42 * scale }, this.scene), this.materials.gunMetal, turretPivot);
+        hatch.position = new Vector3(0.36 * scale, 0.52 * scale, -0.08 * scale);
+        hatch.rotation.y = 0.34;
         break;
       }
       case 'reconJeep': {
@@ -313,13 +344,8 @@ export class UnitRenderer {
 
   update(unit: Unit, isSelected: boolean, isControlled: boolean, target: Unit | null, simTime: number, isHovered = false) {
     const vis = this.ensureVisual(unit);
-    vis.root.setEnabled(!isControlled);
+    vis.root.setEnabled(true);
     vis.destinationMarker.setEnabled(!isControlled);
-    if (isControlled) {
-      vis.attackLine?.dispose();
-      vis.attackLine = undefined;
-      return;
-    }
 
     vis.root.position.x = unit.position.x;
     vis.root.position.z = unit.position.z;
@@ -334,7 +360,7 @@ export class UnitRenderer {
     const recentlyHit = unit.lastDamagedAt !== undefined && simTime - unit.lastDamagedAt < 1.2;
     vis.selectionRing.isVisible = isSelected && !unit.isDestroyed && !isControlled;
     vis.hoverRing.isVisible = isHovered && !isSelected && !unit.isDestroyed && !isControlled;
-    vis.threatRing.isVisible = recentlyHit && !unit.isDestroyed;
+    vis.threatRing.isVisible = recentlyHit && !unit.isDestroyed && !isControlled;
 
     const destination = unit.currentOrder.destination ?? unit.lastOrderDestination;
     vis.destinationMarker.isVisible = Boolean(isSelected && destination && !unit.isDestroyed);
@@ -348,11 +374,11 @@ export class UnitRenderer {
     // local space so the fill always stays visually inside the background bg.
     vis.hpBarFill.scaling.x = hpFrac;
     vis.hpBarFill.material = hpFrac < 0.35 ? this.materials.hpLow : this.materials.hpFill;
-    const showBar = !unit.isDestroyed && hpFrac < 0.999;
+    const showBar = !unit.isDestroyed && hpFrac < 0.999 && !isControlled;
     vis.hpBarBg.isVisible = showBar;
     vis.hpBarFill.isVisible = showBar && hpFrac > 0;
 
-    this.updateAttackLine(vis, unit, target, isSelected);
+    this.updateAttackLine(vis, unit, target, isSelected && !isControlled);
 
     if (unit.isDestroyed && !vis.isDestroyed) {
       vis.isDestroyed = true;

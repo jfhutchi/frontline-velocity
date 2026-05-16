@@ -13,6 +13,7 @@ export interface UnitSummary {
   maxHealth: number;
   armor: number;
   speed: number;
+  currentSpeed: number;
   weaponName: string;
   weaponRange: number;
   reloadSeconds: number;

@@ -41,16 +41,19 @@ export function createBabylonContext(canvas: HTMLCanvasElement): BabylonContext 
   engine.setHardwareScalingLevel(isTouchDevice && ratio > 1 ? Math.min(1.6, Math.max(1, ratio / 1.45)) : 1);
 
   const scene = new Scene(engine);
-  scene.clearColor = new Color4(0.42, 0.51, 0.55, 1);
-  scene.ambientColor = new Color3(0.28, 0.3, 0.25);
+  scene.clearColor = new Color4(0.58, 0.67, 0.72, 1);
+  scene.ambientColor = new Color3(0.25, 0.27, 0.22);
   scene.fogMode = Scene.FOGMODE_LINEAR;
-  scene.fogColor = new Color3(0.45, 0.49, 0.42);
-  scene.fogStart = 100;
-  scene.fogEnd = 310;
+  scene.fogColor = new Color3(0.58, 0.62, 0.58);
+  scene.fogStart = 145;
+  scene.fogEnd = 420;
   scene.imageProcessingConfiguration.toneMappingEnabled = true;
   scene.imageProcessingConfiguration.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
   scene.imageProcessingConfiguration.exposure = 1.04;
-  scene.imageProcessingConfiguration.contrast = 1.2;
+  scene.imageProcessingConfiguration.contrast = 1.27;
+  scene.imageProcessingConfiguration.vignetteEnabled = true;
+  scene.imageProcessingConfiguration.vignetteWeight = 0.86;
+  scene.imageProcessingConfiguration.vignetteColor = new Color4(0.035, 0.04, 0.035, 1);
 
   const camera = new ArcRotateCamera(
     'tactical-cam',
@@ -71,12 +74,12 @@ export function createBabylonContext(canvas: HTMLCanvasElement): BabylonContext 
 
   // Don't auto-attach inputs; CameraController owns input wiring per mode.
   const hemiLight = new HemisphericLight('hemi', new Vector3(0.2, 1, 0.1), scene);
-  hemiLight.intensity = 0.84;
-  hemiLight.groundColor = new Color3(0.2, 0.17, 0.12);
+  hemiLight.intensity = 0.72;
+  hemiLight.groundColor = new Color3(0.18, 0.15, 0.1);
 
-  const sunLight = new DirectionalLight('sun', new Vector3(-0.5, -1, -0.42), scene);
-  sunLight.intensity = 1.36;
-  sunLight.position = new Vector3(80, 120, 62);
+  const sunLight = new DirectionalLight('sun', new Vector3(-0.42, -0.82, -0.34), scene);
+  sunLight.intensity = 1.52;
+  sunLight.position = new Vector3(88, 105, 74);
   sunLight.shadowMinZ = 20;
   sunLight.shadowMaxZ = 260;
   const shadowGenerator = new ShadowGenerator(2048, sunLight);
@@ -98,6 +101,7 @@ export function createBabylonContext(canvas: HTMLCanvasElement): BabylonContext 
   pipeline.sharpen.edgeAmount = 0.18;
   pipeline.sharpen.colorAmount = 0.55;
   buildSkyDome(scene);
+  buildCloudBanks(scene);
 
   return { engine, scene, camera, hemiLight, sunLight, shadowGenerator, glowLayer, pipeline };
 }
@@ -111,9 +115,9 @@ function buildSkyDome(scene: Scene) {
   const skyTexture = new DynamicTexture('proceduralSky', { width: 1024, height: 512 }, scene, true);
   const ctx = skyTexture.getContext() as CanvasRenderingContext2D;
   const gradient = ctx.createLinearGradient(0, 0, 0, 512);
-  gradient.addColorStop(0, '#7f929c');
-  gradient.addColorStop(0.42, '#b7b8a9');
-  gradient.addColorStop(1, '#d0b987');
+  gradient.addColorStop(0, '#87a9bd');
+  gradient.addColorStop(0.42, '#b8c6c8');
+  gradient.addColorStop(1, '#d0c29d');
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, 1024, 512);
 
@@ -140,6 +144,7 @@ function buildSkyDome(scene: Scene) {
     sideOrientation: Mesh.BACKSIDE,
   }, scene);
   sky.infiniteDistance = true;
+  sky.applyFog = false;
   sky.position.y = -24;
   const skyMat = new StandardMaterial('skyDomeMat', scene);
   skyMat.disableLighting = true;
@@ -148,6 +153,55 @@ function buildSkyDome(scene: Scene) {
   skyMat.emissiveTexture = skyTexture;
   skyMat.specularColor = Color3.Black();
   sky.material = skyMat;
+}
+
+function buildCloudBanks(scene: Scene) {
+  const banks = [
+    { x: -66, y: 54, z: -174, w: 92, h: 30 },
+    { x: 20, y: 66, z: -192, w: 118, h: 34 },
+    { x: 92, y: 52, z: -150, w: 76, h: 24 },
+    { x: -126, y: 48, z: -124, w: 72, h: 22 },
+    { x: 44, y: 66, z: 150, w: 84, h: 26 },
+  ];
+
+  banks.forEach((bank, bankIndex) => {
+    const tex = new DynamicTexture(`cloudTex_${bankIndex}`, { width: 512, height: 192 }, scene, true);
+    const ctx = tex.getContext() as CanvasRenderingContext2D;
+    ctx.clearRect(0, 0, 512, 192);
+    for (let i = 0; i < 11; i += 1) {
+      const x = 40 + seeded(bankIndex * 31 + i * 7) * 432;
+      const y = 70 + seeded(bankIndex * 37 + i * 11) * 48;
+      const rx = 46 + seeded(bankIndex * 41 + i * 13) * 74;
+      const ry = 16 + seeded(bankIndex * 43 + i * 17) * 26;
+      const alpha = 0.13 + seeded(bankIndex * 47 + i * 19) * 0.19;
+      const grad = ctx.createRadialGradient(x, y, 2, x, y, rx);
+      grad.addColorStop(0, `rgba(246,244,226,${alpha})`);
+      grad.addColorStop(0.55, `rgba(228,226,208,${alpha * 0.58})`);
+      grad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    tex.update();
+    tex.hasAlpha = true;
+
+    const mat = new StandardMaterial(`cloudMat_${bankIndex}`, scene);
+    mat.disableLighting = true;
+    mat.backFaceCulling = false;
+    mat.diffuseTexture = tex;
+    mat.opacityTexture = tex;
+    mat.emissiveTexture = tex;
+    mat.specularColor = Color3.Black();
+    mat.useAlphaFromDiffuseTexture = true;
+
+    const cloud = MeshBuilder.CreatePlane(`cloud_bank_${bankIndex}`, { width: bank.w, height: bank.h }, scene);
+    cloud.position = new Vector3(bank.x, bank.y, bank.z);
+    cloud.billboardMode = Mesh.BILLBOARDMODE_ALL;
+    cloud.material = mat;
+    cloud.applyFog = false;
+    cloud.isPickable = false;
+  });
 }
 
 function seeded(seed: number) {

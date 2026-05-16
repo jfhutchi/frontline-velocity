@@ -34,10 +34,10 @@ export const MainMenu: React.FC = () => {
                 'An original spiritual successor to classic desktop tactical / RTS games. ' +
                 'All assets, names, code, and missions in this build are original — no copyrighted ' +
                 'content from any prior commercial title is used. ' +
-                'This build ships a denser Operation Crossroads with new unit types ' +
-                '(heavy tank, mortar), destructible buildings, multi-lane streets, expanded ' +
-                'enemy garrison, procedural ground texture, ambient WW2-flavor music, and a ' +
-                'tactical minimap.',
+                'This build ships the art-reference RTS/tank pass: a mobile-safe briefing, ' +
+                'higher tactical camera framing, a third-person over-the-turret tank camera, ' +
+                'denser rural village detail, improved tank silhouettes, stronger battlefield ' +
+                'atmosphere, and a cleaner tactical/direct-control HUD.',
             );
           }}
         >

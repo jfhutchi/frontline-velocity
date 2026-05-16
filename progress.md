@@ -19,6 +19,12 @@ TODO:
 - Fixed the mobile mission briefing blocker by making the briefing screen scroll independently with dynamic viewport height, safe-area padding, and touch panning while keeping gameplay touch blocking on `.game-root` / canvas.
 - Renamed the briefing CTA from `Deploy` to `Start Mission`.
 - Phase 2 validation: `npm run typecheck` PASS, `npm run build` PASS.
+- Bumped the push version to `0.0.5`; the main menu now displays `v0.0.5` with label `Art-Reference RTS/Tank Pass`.
+- Tactical camera reset now frames the village/crossroads from a higher RTS command angle.
+- Added original procedural battlefield details: hedgerows, stone walls, fences, road signs, extra lanes, set-piece crop fields, barricades, wreck debris, muted materials, stronger smoke, and facade details.
+- Improved tank geometry with side skirts, road wheels, tread blocks, glacis plates, rear decks, stowage, mantlets, cupolas, hatches, and muzzle brakes.
+- Direct-control now keeps the controlled tank visible and uses a third-person over-the-turret chase camera with health/reload/speed meters and a separate Return to Command button.
+- Verification included repeated typecheck/build gates, develop-web-game client smoke, mobile briefing scroll/start on 375x667, tactical/direct-control screenshots, and a controls preservation script covering selection, control groups, right-click order, direct-control entry, drive/fire, and return to tactical.
 
 2026-05-15 follow-up pass:
 - Starting a mobile/camera/UI/graphics polish pass from the user prompt: "The state of this game is a bit bad. It doesn't work on mobile browsers and the camera controls are bad the ui is bad and I want the graphics to be a lot better"

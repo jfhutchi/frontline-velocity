@@ -132,7 +132,16 @@ export interface MissionDefinition {
   decorations: MapDecoration[];
 }
 
-export type DecorationKind = 'building' | 'tree' | 'road' | 'fieldPatch' | 'hill';
+export type DecorationKind =
+  | 'building'
+  | 'tree'
+  | 'road'
+  | 'fieldPatch'
+  | 'hill'
+  | 'hedgerow'
+  | 'stoneWall'
+  | 'fence'
+  | 'roadSign';
 
 export type BuildingStyle = 'house' | 'barn' | 'factory' | 'church' | 'bunker';
 
@@ -143,7 +152,7 @@ export interface MapDecoration {
   rotation: number;
   scale: Vec3;
   /** Optional palette tint hint for the renderer. */
-  tint?: 'wall' | 'roof' | 'pine' | 'oak' | 'shrub' | 'dirt' | 'grass' | 'asphalt';
+  tint?: 'wall' | 'roof' | 'pine' | 'oak' | 'shrub' | 'dirt' | 'grass' | 'asphalt' | 'stone' | 'wood';
   /** Building variant; renderer picks geometry/color based on this. */
   buildingStyle?: BuildingStyle;
   /** Whether this decoration can be destroyed by splash/projectile damage. */

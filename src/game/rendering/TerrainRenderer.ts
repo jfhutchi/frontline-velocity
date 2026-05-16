@@ -231,6 +231,14 @@ export class TerrainRenderer {
         return this.buildTree(d);
       case 'hill':
         return this.buildHill(d);
+      case 'hedgerow':
+        return this.buildHedgerow(d);
+      case 'stoneWall':
+        return this.buildStoneWall(d);
+      case 'fence':
+        return this.buildFence(d);
+      case 'roadSign':
+        return this.buildRoadSign(d);
       default:
         return null;
     }
@@ -240,7 +248,7 @@ export class TerrainRenderer {
     const center = MeshBuilder.CreateBox(d.id, { width: d.scale.x, height: d.scale.y, depth: d.scale.z }, this.scene);
     center.position = new Vector3(d.position.x, d.scale.y / 2 + 0.002, d.position.z);
     center.rotation.y = d.rotation;
-    center.material = this.material(`${d.id}_mat`, COLOR.road);
+    center.material = this.material(`${d.id}_mat`, d.tint === 'dirt' ? colorVariant(COLOR.dirt, d.id, 0.035) : COLOR.road);
 
     const horizontal = d.scale.x >= d.scale.z;
     const shoulderMat = this.material(`${d.id}_shoulderMat`, COLOR.roadShoulder);
@@ -258,7 +266,7 @@ export class TerrainRenderer {
     }
 
     const dirtMat = this.material(`${d.id}_wornMat`, COLOR.dirt);
-    for (let i = 0; i < 14; i += 1) {
+    for (let i = 0; i < 18; i += 1) {
       const patch = MeshBuilder.CreateBox(`${d.id}_wear_${i}`, {
         width: horizontal ? 3.5 + (i % 3) : 0.9,
         height: 0.04,
@@ -272,6 +280,16 @@ export class TerrainRenderer {
         : new Vector3(lane * d.scale.x, 0.006, (along - 0.5) * d.scale.z);
       patch.material = dirtMat;
     }
+    const crownMat = this.material(`${d.id}_crownMat`, d.tint === 'dirt' ? { r: 0.48, g: 0.38, b: 0.24 } : { r: 0.18, g: 0.18, b: 0.16 });
+    crownMat.alpha = d.tint === 'dirt' ? 0.32 : 0.22;
+    const crown = MeshBuilder.CreateBox(`${d.id}_crown`, {
+      width: horizontal ? d.scale.x * 0.96 : 0.26,
+      height: 0.022,
+      depth: horizontal ? 0.26 : d.scale.z * 0.96,
+    }, this.scene);
+    crown.parent = center;
+    crown.position.y = 0.012;
+    crown.material = crownMat;
     return center;
   }
 
@@ -380,10 +398,16 @@ export class TerrainRenderer {
       stack.position = new Vector3(w * 0.28, h / 2 + h * 0.4, depth * 0.18);
       this.shadowCaster(stack);
     } else {
-      const roof = MeshBuilder.CreateBox(`${d.id}_roof`, { width: w + 0.7, height: 0.55, depth: depth + 0.7 }, this.scene);
+      const roof = MeshBuilder.CreateCylinder(`${d.id}_roof`, {
+        diameter: Math.min(w, depth) * 1.12,
+        height: w + 0.75,
+        tessellation: 3,
+      }, this.scene);
       roof.material = this.material(`${d.id}_roofMat`, roofTint);
       roof.parent = wall;
-      roof.position = new Vector3(0, h / 2 + 0.28, 0);
+      roof.rotation.z = Math.PI / 2;
+      roof.rotation.y = Math.PI / 2;
+      roof.position = new Vector3(0, h / 2 + Math.min(w, depth) * 0.29, 0);
       this.shadowCaster(roof);
     }
 
@@ -402,6 +426,35 @@ export class TerrainRenderer {
         win.material = windowMat;
         win.parent = wall;
         win.position = new Vector3(x, 0.25, zSide * (depth / 2 + 0.055));
+      }
+    }
+
+    const trimMat = this.material(`${d.id}_trimMat`, { r: 0.76, g: 0.7, b: 0.58 });
+    const baseMat = this.material(`${d.id}_foundationMat`, colorVariant(COLOR.stoneWall, `${d.id}_foundation`, 0.04));
+    const foundation = MeshBuilder.CreateBox(`${d.id}_foundation`, { width: w + 0.16, height: 0.42, depth: depth + 0.16 }, this.scene);
+    foundation.material = baseMat;
+    foundation.parent = wall;
+    foundation.position = new Vector3(0, -h / 2 + 0.22, 0);
+    for (const zSide of [-1, 1]) {
+      for (const x of [-w * 0.28, w * 0.28]) {
+        const lintel = MeshBuilder.CreateBox(`${d.id}_lintel_${x}_${zSide}`, { width: 1.32, height: 0.12, depth: 0.1 }, this.scene);
+        lintel.material = trimMat;
+        lintel.parent = wall;
+        lintel.position = new Vector3(x, 0.74, zSide * (depth / 2 + 0.075));
+        const sill = MeshBuilder.CreateBox(`${d.id}_sill_${x}_${zSide}`, { width: 1.18, height: 0.1, depth: 0.12 }, this.scene);
+        sill.material = trimMat;
+        sill.parent = wall;
+        sill.position = new Vector3(x, -0.2, zSide * (depth / 2 + 0.08));
+      }
+    }
+    if (style === 'house' || style === 'church') {
+      const dormerMat = this.material(`${d.id}_dormerMat`, wallTint);
+      for (const x of [-w * 0.18, w * 0.18]) {
+        const dormer = MeshBuilder.CreateBox(`${d.id}_dormer_${x}`, { width: 0.9, height: 0.65, depth: 0.58 }, this.scene);
+        dormer.material = dormerMat;
+        dormer.parent = wall;
+        dormer.position = new Vector3(x, h / 2 + 0.55, depth * 0.18);
+        this.shadowCaster(dormer);
       }
     }
 
@@ -486,6 +539,97 @@ export class TerrainRenderer {
     return m;
   }
 
+  private buildHedgerow(d: MapDecoration): Mesh {
+    const root = MeshBuilder.CreateBox(d.id, { width: d.scale.x, height: 0.28, depth: d.scale.z }, this.scene);
+    root.position = new Vector3(d.position.x, 0.18, d.position.z);
+    root.rotation.y = d.rotation;
+    root.material = this.material(`${d.id}_base`, { r: 0.11, g: 0.19, b: 0.08 });
+    root.receiveShadows = true;
+    const clumpCount = Math.max(5, Math.floor(d.scale.x / 4));
+    for (let i = 0; i < clumpCount; i += 1) {
+      const t = clumpCount === 1 ? 0.5 : i / (clumpCount - 1);
+      const bush = MeshBuilder.CreateSphere(`${d.id}_bush_${i}`, {
+        diameter: 1.75 + seeded(i * 17 + d.position.x) * 0.8,
+        segments: 7,
+      }, this.scene);
+      bush.parent = root;
+      bush.position = new Vector3(
+        (t - 0.5) * d.scale.x,
+        0.48 + seeded(i * 13 + 4) * 0.22,
+        (seeded(i * 19 + 2) - 0.5) * d.scale.z * 0.7,
+      );
+      bush.scaling.y = 0.62 + seeded(i * 11 + 6) * 0.28;
+      bush.material = this.material(`${d.id}_bushMat_${i}`, colorVariant(COLOR.hedge, `${d.id}_${i}`, 0.07));
+      this.shadowCaster(bush);
+    }
+    return root;
+  }
+
+  private buildStoneWall(d: MapDecoration): Mesh {
+    const root = MeshBuilder.CreateBox(d.id, { width: d.scale.x, height: 0.28, depth: d.scale.z }, this.scene);
+    root.position = new Vector3(d.position.x, 0.25, d.position.z);
+    root.rotation.y = d.rotation;
+    root.material = this.material(`${d.id}_mortar`, colorVariant(COLOR.stoneWall, d.id, 0.04));
+    root.receiveShadows = true;
+    const stones = Math.max(7, Math.floor(d.scale.x / 2.2));
+    for (let i = 0; i < stones; i += 1) {
+      const stone = MeshBuilder.CreateBox(`${d.id}_stone_${i}`, {
+        width: 1.0 + seeded(i * 5 + 1) * 0.55,
+        height: 0.42 + seeded(i * 7 + 2) * 0.28,
+        depth: d.scale.z * (0.72 + seeded(i * 13 + 3) * 0.22),
+      }, this.scene);
+      stone.parent = root;
+      stone.position = new Vector3((i / Math.max(1, stones - 1) - 0.5) * d.scale.x, 0.22, 0);
+      stone.rotation.y = (seeded(i * 17 + 6) - 0.5) * 0.14;
+      stone.material = this.material(`${d.id}_stoneMat_${i}`, colorVariant(COLOR.stoneWall, `${d.id}_${i}`, 0.08));
+      this.shadowCaster(stone);
+    }
+    return root;
+  }
+
+  private buildFence(d: MapDecoration): Mesh {
+    const root = MeshBuilder.CreateBox(d.id, { width: d.scale.x, height: 0.08, depth: 0.08 }, this.scene);
+    root.position = new Vector3(d.position.x, 0.5, d.position.z);
+    root.rotation.y = d.rotation;
+    root.material = this.material(`${d.id}_railMat`, COLOR.fenceWood);
+    root.receiveShadows = true;
+    const railMat = this.material(`${d.id}_railMat2`, colorVariant(COLOR.fenceWood, d.id, 0.05));
+    for (const y of [-0.22, 0.18]) {
+      const rail = MeshBuilder.CreateBox(`${d.id}_rail_${y}`, { width: d.scale.x, height: 0.1, depth: 0.1 }, this.scene);
+      rail.parent = root;
+      rail.position.y = y;
+      rail.material = railMat;
+      this.shadowCaster(rail);
+    }
+    const posts = Math.max(4, Math.floor(d.scale.x / 5));
+    for (let i = 0; i < posts; i += 1) {
+      const post = MeshBuilder.CreateBox(`${d.id}_post_${i}`, { width: 0.18, height: 1.1, depth: 0.18 }, this.scene);
+      post.parent = root;
+      post.position = new Vector3((i / Math.max(1, posts - 1) - 0.5) * d.scale.x, 0, 0);
+      post.material = railMat;
+      this.shadowCaster(post);
+    }
+    return root;
+  }
+
+  private buildRoadSign(d: MapDecoration): Mesh {
+    const root = MeshBuilder.CreateBox(d.id, { width: 0.18, height: d.scale.y, depth: 0.18 }, this.scene);
+    root.position = new Vector3(d.position.x, d.scale.y / 2, d.position.z);
+    root.rotation.y = d.rotation;
+    root.material = this.material(`${d.id}_postMat`, COLOR.fenceWood);
+    this.shadowCaster(root);
+    const plankMat = this.material(`${d.id}_plankMat`, { r: 0.42, g: 0.28, b: 0.15 });
+    for (let i = 0; i < 3; i += 1) {
+      const plank = MeshBuilder.CreateBox(`${d.id}_plank_${i}`, { width: 3.2 - i * 0.38, height: 0.34, depth: 0.12 }, this.scene);
+      plank.parent = root;
+      plank.position = new Vector3(i % 2 === 0 ? 1.35 : -1.15, 0.72 - i * 0.42, 0);
+      plank.rotation.z = (i - 1) * 0.05;
+      plank.material = plankMat;
+      this.shadowCaster(plank);
+    }
+    return root;
+  }
+
   private buildBattlefieldDetails(size: number) {
     const craterMat = this.material('crater_scars_mat', { r: 0.14, g: 0.12, b: 0.09 });
     craterMat.alpha = 0.58;
@@ -564,6 +708,46 @@ export class TerrainRenderer {
         puff.material = smokeMat;
         this.meshes.push(puff);
       }
+    });
+
+    const timberMat = this.material('battlefield_timber_mat', COLOR.fenceWood);
+    const metalMat = this.material('battlefield_metal_mat', { r: 0.16, g: 0.15, b: 0.13 });
+    const debrisMat = this.material('battlefield_debris_mat', { r: 0.34, g: 0.28, b: 0.2 });
+    const barricades = [
+      { x: -8, z: 9, rot: 0.35 },
+      { x: 11, z: -8, rot: -0.25 },
+      { x: -24, z: -3, rot: 1.5 },
+      { x: 24, z: 6, rot: 1.45 },
+    ];
+    barricades.forEach((b, i) => {
+      for (let j = 0; j < 3; j += 1) {
+        const beam = MeshBuilder.CreateBox(`barricade_${i}_${j}`, { width: 4.4, height: 0.22, depth: 0.28 }, this.scene);
+        beam.position = new Vector3(b.x, 0.35 + j * 0.26, b.z);
+        beam.rotation.y = b.rot + (j - 1) * 0.18;
+        beam.rotation.z = (j - 1) * 0.08;
+        beam.material = timberMat;
+        this.shadowCaster(beam);
+        this.meshes.push(beam);
+      }
+    });
+
+    const staticWrecks = [
+      { x: -6, z: -15, rot: -0.8 },
+      { x: 18, z: 32, rot: 0.45 },
+    ];
+    staticWrecks.forEach((w, i) => {
+      const hull = MeshBuilder.CreateBox(`static_wreck_${i}`, { width: 2.8, height: 0.65, depth: 3.7 }, this.scene);
+      hull.position = new Vector3(w.x, 0.45, w.z);
+      hull.rotation.y = w.rot;
+      hull.rotation.z = 0.16;
+      hull.material = metalMat;
+      this.shadowCaster(hull);
+      this.meshes.push(hull);
+      const rubble = MeshBuilder.CreateBox(`static_wreck_debris_${i}`, { width: 4.4, height: 0.18, depth: 3.2 }, this.scene);
+      rubble.position = new Vector3(w.x + 0.8, 0.12, w.z - 0.4);
+      rubble.rotation.y = w.rot + 0.35;
+      rubble.material = debrisMat;
+      this.meshes.push(rubble);
     });
   }
 

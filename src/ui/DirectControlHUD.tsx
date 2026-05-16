@@ -16,6 +16,8 @@ export const DirectControlHUD: React.FC<Props> = ({ engine }) => {
   const u = summaries.find((s) => s.id === controlledId);
   if (!u) return null;
   const hpPct = (u.health / u.maxHealth) * 100;
+  const speedKmh = Math.round(u.currentSpeed * 3.6);
+  const speedPct = Math.min(100, (u.currentSpeed / Math.max(0.01, u.speed)) * 100);
 
   return (
     <div className="dc-hud">
@@ -42,27 +44,30 @@ export const DirectControlHUD: React.FC<Props> = ({ engine }) => {
           <span className={`value${hpPct < 35 ? ' low' : ''}`}>
             {u.health}/{u.maxHealth}
           </span>
+          <span className="dc-meter"><span style={{ width: `${hpPct}%` }} /></span>
         </div>
         <div className="stat">
           <span className="label">Reload</span>
           <span className={`value${u.reloadProgress < 0.99 ? ' warm' : ''}`}>
-            {(u.reloadProgress * 100).toFixed(0)}%
+            {u.reloadProgress >= 0.99 ? 'Ready' : `${(u.reloadProgress * 100).toFixed(0)}%`}
           </span>
+          <span className="dc-meter"><span style={{ width: `${u.reloadProgress * 100}%` }} /></span>
         </div>
         <div className="stat">
           <span className="label">Speed</span>
-          <span className="value">{u.speed.toFixed(1)}</span>
+          <span className="value">{speedKmh} km/h</span>
+          <span className="dc-meter"><span style={{ width: `${speedPct}%` }} /></span>
         </div>
-        <button
-          className="return-btn"
-          onClick={() => {
-            AudioManager.play('click');
-            engine?.exitDirectControl();
-          }}
-        >
-          Return (R) | Esc pauses
-        </button>
       </div>
+      <button
+        className="return-btn"
+        onClick={() => {
+          AudioManager.play('click');
+          engine?.exitDirectControl();
+        }}
+      >
+        Return to Command (R)
+      </button>
       <Minimap engine={engine} />
     </div>
   );

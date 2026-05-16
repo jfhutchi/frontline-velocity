@@ -220,7 +220,7 @@ export const GameRoot: React.FC = () => {
             }}
           />
         )}
-        {ready && (screen === 'tactical' || screen === 'directControl') && <ControlsHelp mode={screen} />}
+        {ready && screen === 'tactical' && <ControlsHelp mode={screen} />}
         {ready && screen === 'tactical' && !paused && isTouchDevice() && (
           <MobileTacticalControls engine={engineRef.current} />
         )}

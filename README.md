@@ -5,7 +5,36 @@ armored platoon trying to capture a defended village crossroads. Issue
 attack-move orders from the tactical command view, then jump into a vehicle and
 fight directly from a third-person combat camera.
 
-**Current version: v0.0.4 — expanded Crossroads, destructible city, minimap**
+**Current version: v0.0.5 - art-reference RTS/tank pass**
+
+## What's new in v0.0.5
+
+v0.0.5 is a desktop-first visual, HUD, and camera pass aimed at closing the
+gap to the uploaded tactical RTS and direct-control tank reference images.
+
+- Fixed the mobile mission briefing blocker: portrait players can scroll the
+  briefing, reach Back, and press Start Mission without rotating the device.
+- Tactical camera reset now frames the village crossroads from a higher RTS
+  command angle with the objective, roads, fields, and approach lanes visible.
+- Direct-control mode now uses a third-person over-the-turret chase camera;
+  the controlled tank remains visible in the foreground with turret, barrel,
+  hull, tracks, and stowage details.
+- Tactical battlefield detail pass: added hedgerows, stone walls, fences, road
+  signs, extra approach lanes, set-piece crop fields, barricades, wreck debris,
+  stronger smoke columns, muted terrain colors, and more grounded building
+  facade details.
+- Tank silhouettes are heavier and more readable: side skirts, road wheels,
+  tread blocks, glacis plates, rear decks, stowage, mantlets, cupolas, hatches,
+  and muzzle brakes are built from original procedural geometry.
+- HUD pass: tactical roster bars remain clipped in dedicated rows, direct
+  control now shows health/reload/speed meters, the return-to-command button
+  sits as its own bottom-right control, and direct-control help clutter is
+  removed from the tank view.
+- Validation for this pass included `npm install`, repeated `npm run typecheck`
+  and `npm run build`, the develop-web-game Playwright client, mobile briefing
+  scroll/start verification, tactical screenshots, direct-control screenshots,
+  and a controls preservation script covering selection, control group recall,
+  right-click order, direct-control entry, drive/fire, and return to tactical.
 
 ## What's new in v0.0.4
 
