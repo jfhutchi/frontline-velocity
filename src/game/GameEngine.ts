@@ -293,14 +293,16 @@ export class GameEngine {
     unit.rotation += input.turn * DC_TURN_RATE * dt;
 
     // Vehicle velocity along forward axis with simple acceleration.
+    const dcFwdMax = Math.min(DC_MAX_FORWARD_SPEED, unit.speed);
+    const dcRevMax = Math.min(DC_MAX_REVERSE_SPEED, unit.speed);
     if (input.forward > 0) {
       this.vehicleVelocity = Math.min(
-        DC_MAX_FORWARD_SPEED,
+        dcFwdMax,
         this.vehicleVelocity + DC_FORWARD_ACCEL * input.forward * dt,
       );
     } else if (input.forward < 0) {
       this.vehicleVelocity = Math.max(
-        -DC_MAX_REVERSE_SPEED,
+        -dcRevMax,
         this.vehicleVelocity + DC_REVERSE_ACCEL * input.forward * dt,
       );
     } else {
