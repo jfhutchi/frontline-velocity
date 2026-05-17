@@ -28,7 +28,7 @@ export class TerrainRenderer {
   build(mission: MissionDefinition) {
     this.dispose();
     const size = mission.mapSize;
-    const ground = MeshBuilder.CreateGround('ground', { width: size, height: size, subdivisions: 64 }, this.scene);
+    const ground = MeshBuilder.CreateGround('ground', { width: size, height: size, subdivisions: 96 }, this.scene);
     this.addSubtleTerrainHeight(ground);
     const gMat = this.buildGroundMaterial(size);
     ground.material = gMat;

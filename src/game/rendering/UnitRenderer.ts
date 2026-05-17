@@ -13,6 +13,17 @@ import {
 import { COLOR } from '../constants';
 import type { Unit, UnitType } from '../types';
 
+interface InfantrySoldier {
+  torso: Mesh;
+  head: Mesh;
+  legL: Mesh;
+  legR: Mesh;
+  baseTorsoY: number;
+  baseHeadY: number;
+  /** Per-soldier gait phase offset (radians) so squads look staggered. */
+  phase: number;
+}
+
 interface UnitVisual {
   root: TransformNode;
   hull: Mesh;
@@ -31,6 +42,8 @@ interface UnitVisual {
   attackLine?: LinesMesh;
   isDestroyed: boolean;
   type: UnitType;
+  /** Populated for infantry units; drives the procedural walk cycle. */
+  soldiers?: InfantrySoldier[];
 }
 
 const HP_BAR_WIDTH = 2.8;
@@ -143,6 +156,7 @@ export class UnitRenderer {
 
     let hull: Mesh;
     let turretPivot: TransformNode | undefined;
+    let soldiers: InfantrySoldier[] | undefined;
 
     switch (unit.type) {
       case 'heavyTank':
@@ -282,15 +296,28 @@ export class UnitRenderer {
           [-0.34, -0.48],
           [0.42, -0.42],
         ];
-        for (const [x, z] of spots) {
-          const body = this.mesh(`soldier_${unit.id}_${x}_${z}`, MeshBuilder.CreateCylinder(`soldier_${unit.id}_${x}_${z}`, { diameter: 0.28, height: 0.8, tessellation: 8 }, this.scene), this.materials.soldier, root);
-          body.position = new Vector3(x, 0.48, z);
-          const head = this.mesh(`head_${unit.id}_${x}_${z}`, MeshBuilder.CreateSphere(`head_${unit.id}_${x}_${z}`, { diameter: 0.24, segments: 6 }, this.scene), this.materials.soldier, root);
-          head.position = new Vector3(x, 0.98, z);
-          const rifle = this.mesh(`rifle_${unit.id}_${x}_${z}`, MeshBuilder.CreateCylinder(`rifle_${unit.id}_${x}_${z}`, { diameter: 0.055, height: 0.8, tessellation: 6 }, this.scene), this.materials.gunMetal, root);
+        soldiers = [];
+        spots.forEach(([sx, sz], si) => {
+          // Torso (upper body cylinder — sits above the waist).
+          const torso = this.mesh(`torso_${unit.id}_${si}`, MeshBuilder.CreateCylinder(`torso_${unit.id}_${si}`, { diameter: 0.28, height: 0.44, tessellation: 8 }, this.scene), this.materials.soldier, root);
+          const baseTorsoY = 0.64;
+          torso.position = new Vector3(sx, baseTorsoY, sz);
+          // Head sphere.
+          const head = this.mesh(`head_${unit.id}_${si}`, MeshBuilder.CreateSphere(`head_${unit.id}_${si}`, { diameter: 0.24, segments: 6 }, this.scene), this.materials.soldier, root);
+          const baseHeadY = 0.97;
+          head.position = new Vector3(sx, baseHeadY, sz);
+          // Left leg — pivots around its centre so rotation.x swings toe forward/back.
+          const legL = this.mesh(`legL_${unit.id}_${si}`, MeshBuilder.CreateCylinder(`legL_${unit.id}_${si}`, { diameter: 0.14, height: 0.38, tessellation: 7 }, this.scene), this.materials.soldier, root);
+          legL.position = new Vector3(sx - 0.065, 0.24, sz);
+          // Right leg (mirrored x offset).
+          const legR = this.mesh(`legR_${unit.id}_${si}`, MeshBuilder.CreateCylinder(`legR_${unit.id}_${si}`, { diameter: 0.14, height: 0.38, tessellation: 7 }, this.scene), this.materials.soldier, root);
+          legR.position = new Vector3(sx + 0.065, 0.24, sz);
+          // Rifle.
+          const rifle = this.mesh(`rifle_${unit.id}_${si}`, MeshBuilder.CreateCylinder(`rifle_${unit.id}_${si}`, { diameter: 0.055, height: 0.8, tessellation: 6 }, this.scene), this.materials.gunMetal, root);
           rifle.rotation.x = Math.PI / 2;
-          rifle.position = new Vector3(x + 0.08, 0.74, z + 0.33);
-        }
+          rifle.position = new Vector3(sx + 0.08, 0.74, sz + 0.33);
+          soldiers!.push({ torso, head, legL, legR, baseTorsoY, baseHeadY, phase: si * (Math.PI / 2) });
+        });
         break;
       }
       case 'mortar': {
@@ -411,6 +438,7 @@ export class UnitRenderer {
       destinationMarker,
       isDestroyed: false,
       type: unit.type,
+      soldiers,
     };
   }
 
@@ -465,6 +493,27 @@ export class UnitRenderer {
       vis.hpBarFill.isVisible = false;
       vis.attackLine?.dispose();
       vis.attackLine = undefined;
+    }
+
+    // Infantry procedural walk cycle — bob torso + swing legs when moving.
+    if (vis.soldiers && !unit.isDestroyed) {
+      const walking = unit.currentSpeed > 0.25;
+      // Step frequency: ~7.5 rad/s ≈ 1.2 footfalls/sec; body bobs at twice that.
+      const freq = 7.5;
+      for (const s of vis.soldiers) {
+        if (walking) {
+          const phase = simTime * freq + s.phase;
+          s.torso.position.y = s.baseTorsoY + Math.sin(phase * 2) * 0.028;
+          s.head.position.y = s.torso.position.y + (s.baseHeadY - s.baseTorsoY);
+          s.legL.rotation.x = Math.sin(phase) * 0.38;
+          s.legR.rotation.x = -Math.sin(phase) * 0.38;
+        } else {
+          s.torso.position.y = s.baseTorsoY;
+          s.head.position.y = s.baseHeadY;
+          s.legL.rotation.x = 0;
+          s.legR.rotation.x = 0;
+        }
+      }
     }
   }
 

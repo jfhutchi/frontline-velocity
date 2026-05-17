@@ -45,8 +45,8 @@ export function createBabylonContext(canvas: HTMLCanvasElement): BabylonContext 
   scene.ambientColor = new Color3(0.34, 0.34, 0.29);
   scene.fogMode = Scene.FOGMODE_LINEAR;
   scene.fogColor = new Color3(0.75, 0.86, 0.92);
-  scene.fogStart = 235;
-  scene.fogEnd = 720;
+  scene.fogStart = 520;
+  scene.fogEnd = 1600;
   scene.imageProcessingConfiguration.toneMappingEnabled = true;
   scene.imageProcessingConfiguration.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
   scene.imageProcessingConfiguration.exposure = 1.12;
