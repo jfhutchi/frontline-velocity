@@ -13,6 +13,12 @@ import {
 import { COLOR } from '../constants';
 import type { Unit, UnitType } from '../types';
 
+interface SoldierPose {
+  body: Mesh;
+  head: Mesh;
+  rifle: Mesh;
+}
+
 interface UnitVisual {
   root: TransformNode;
   hull: Mesh;
@@ -31,6 +37,8 @@ interface UnitVisual {
   attackLine?: LinesMesh;
   isDestroyed: boolean;
   type: UnitType;
+  /** Per-soldier mesh refs for walk-cycle animation (infantry only). */
+  soldierPoses?: SoldierPose[];
 }
 
 const HP_BAR_WIDTH = 2.8;
@@ -143,6 +151,7 @@ export class UnitRenderer {
 
     let hull: Mesh;
     let turretPivot: TransformNode | undefined;
+    let soldierPoses: SoldierPose[] | undefined;
 
     switch (unit.type) {
       case 'heavyTank':
@@ -282,6 +291,7 @@ export class UnitRenderer {
           [-0.34, -0.48],
           [0.42, -0.42],
         ];
+        soldierPoses = [];
         for (const [x, z] of spots) {
           const body = this.mesh(`soldier_${unit.id}_${x}_${z}`, MeshBuilder.CreateCylinder(`soldier_${unit.id}_${x}_${z}`, { diameter: 0.28, height: 0.8, tessellation: 8 }, this.scene), this.materials.soldier, root);
           body.position = new Vector3(x, 0.48, z);
@@ -290,6 +300,7 @@ export class UnitRenderer {
           const rifle = this.mesh(`rifle_${unit.id}_${x}_${z}`, MeshBuilder.CreateCylinder(`rifle_${unit.id}_${x}_${z}`, { diameter: 0.055, height: 0.8, tessellation: 6 }, this.scene), this.materials.gunMetal, root);
           rifle.rotation.x = Math.PI / 2;
           rifle.position = new Vector3(x + 0.08, 0.74, z + 0.33);
+          soldierPoses.push({ body, head, rifle });
         }
         break;
       }
@@ -411,6 +422,7 @@ export class UnitRenderer {
       destinationMarker,
       isDestroyed: false,
       type: unit.type,
+      soldierPoses,
     };
   }
 
@@ -425,6 +437,18 @@ export class UnitRenderer {
     vis.root.rotation.y = unit.rotation;
     if (vis.turretPivot) {
       vis.turretPivot.rotation.y = unit.turretRotation;
+    }
+
+    // Infantry walk cycle: phase-staggered Y bob when moving.
+    if (unit.type === 'infantry' && vis.soldierPoses && !unit.isDestroyed) {
+      const moving = unit.currentSpeed > 0.4;
+      vis.soldierPoses.forEach((p, i) => {
+        const phase = i * Math.PI * 0.5; // 90° stagger per soldier
+        const bob = moving ? Math.sin(simTime * 9 + phase) * 0.055 : 0;
+        p.body.position.y = 0.48 + bob;
+        p.head.position.y = 0.98 + bob;
+        p.rifle.position.y = 0.74 + bob;
+      });
     }
 
     this.orientHealthBarPivot(vis, unit);
