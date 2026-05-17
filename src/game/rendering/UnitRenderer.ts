@@ -13,6 +13,12 @@ import {
 import { COLOR } from '../constants';
 import type { Unit, UnitType } from '../types';
 
+interface SoldierMeshes {
+  body: Mesh;
+  head: Mesh;
+  rifle: Mesh;
+}
+
 interface UnitVisual {
   root: TransformNode;
   hull: Mesh;
@@ -31,6 +37,8 @@ interface UnitVisual {
   attackLine?: LinesMesh;
   isDestroyed: boolean;
   type: UnitType;
+  /** Infantry only — references to individual soldier sub-meshes for walk animation. */
+  infantrySoldiers?: SoldierMeshes[];
 }
 
 const HP_BAR_WIDTH = 2.8;
@@ -154,6 +162,7 @@ export class UnitRenderer {
 
     let hull: Mesh;
     let turretPivot: TransformNode | undefined;
+    let infantrySoldiers: SoldierMeshes[] | undefined;
 
     switch (unit.type) {
       case 'heavyTank':
@@ -293,6 +302,7 @@ export class UnitRenderer {
           [-0.34, -0.48],
           [0.42, -0.42],
         ];
+        infantrySoldiers = [];
         for (const [x, z] of spots) {
           const body = this.mesh(`soldier_${unit.id}_${x}_${z}`, MeshBuilder.CreateCylinder(`soldier_${unit.id}_${x}_${z}`, { diameter: 0.28, height: 0.8, tessellation: 8 }, this.scene), this.materials.soldier, root);
           body.position = new Vector3(x, 0.48, z);
@@ -301,6 +311,7 @@ export class UnitRenderer {
           const rifle = this.mesh(`rifle_${unit.id}_${x}_${z}`, MeshBuilder.CreateCylinder(`rifle_${unit.id}_${x}_${z}`, { diameter: 0.055, height: 0.8, tessellation: 6 }, this.scene), this.materials.gunMetal, root);
           rifle.rotation.x = Math.PI / 2;
           rifle.position = new Vector3(x + 0.08, 0.74, z + 0.33);
+          infantrySoldiers.push({ body, head, rifle });
         }
         break;
       }
@@ -422,6 +433,7 @@ export class UnitRenderer {
       destinationMarker,
       isDestroyed: false,
       type: unit.type,
+      infantrySoldiers,
     };
   }
 
@@ -477,6 +489,10 @@ export class UnitRenderer {
       vis.attackLine?.dispose();
       vis.attackLine = undefined;
     }
+
+    if (vis.infantrySoldiers && !unit.isDestroyed) {
+      this.animateInfantryWalk(vis.infantrySoldiers, unit, simTime);
+    }
   }
 
   removeMissing(activeIds: Set<string>) {
@@ -526,6 +542,25 @@ export class UnitRenderer {
       ],
     }, this.scene);
     vis.attackLine.color = unit.faction === 'friendly' ? new Color3(0.55, 0.8, 1) : new Color3(1, 0.45, 0.28);
+  }
+
+  /**
+   * Velocity-blended infantry walk cycle. Bob amplitude and step frequency
+   * both scale with speed so soldiers stand still when idle and march briskly
+   * when moving at full speed. Phase is offset per soldier so they don't all
+   * bob in lockstep.
+   */
+  private animateInfantryWalk(soldiers: SoldierMeshes[], unit: Unit, simTime: number) {
+    const speedFrac = unit.speed > 0 ? Math.min(1, Math.max(0, unit.currentSpeed / unit.speed)) : 0;
+    const amplitude = speedFrac * 0.08;
+    const frequency = (1.5 + speedFrac * 1.5) * Math.PI * 2; // 1.5–3 Hz in radians/s
+    for (let i = 0; i < soldiers.length; i++) {
+      const { body, head, rifle } = soldiers[i];
+      const bob = Math.sin(simTime * frequency + i * Math.PI * 0.5) * amplitude;
+      body.position.y = 0.48 + bob;
+      head.position.y = 0.98 + bob;
+      rifle.position.y = 0.74 + bob;
+    }
   }
 
   private mesh(name: string, mesh: Mesh, material: PBRMaterial, parent: TransformNode): Mesh {

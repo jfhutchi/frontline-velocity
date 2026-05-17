@@ -61,29 +61,64 @@ export class Simulation {
 
   private buildEnemyTactics() {
     this.cover.buildFromMission(this.state);
-    const enemyUnits = [...this.state.units.values()].filter((u) => u.faction === 'enemy');
-    if (!enemyUnits.length) return;
-    // Synthetic supply depot placed off the south map edge — far enough from
-    // combat that ResupplyAtDepot requires a real trip, but near enemy spawn
-    // so it's defensible. The commander will only consult it when supplied.
     const supplyPoint: Vec3 = { x: 0, y: 0, z: -90 };
-    // Average enemy starting position is a sensible fallback rally point.
-    const cx = enemyUnits.reduce((s, u) => s + u.position.x, 0) / enemyUnits.length;
-    const cz = enemyUnits.reduce((s, u) => s + u.position.z, 0) / enemyUnits.length;
-    const fallbackPoint: Vec3 = { x: cx, y: 0, z: cz - 14 };
-    const brain = new EnemySquadGOAPBrain(
+
+    // Split enemy units into 4 zone-based squads so the CommanderAI can
+    // coordinate zone defence, reinforcements, and fallback independently.
+    //   Alpha — northern heavy defence (tanks + mortars + northern infantry)
+    //   Bravo — central crossroads patrol
+    //   Charlie — eastern flank
+    //   Delta — southern approach
+    type SquadDef = { id: string; ids: string[]; fallback: Vec3; morale: number; ammo: number };
+    const squads: SquadDef[] = [
       {
-        squadId: 'enemy-alpha',
-        unitIds: enemyUnits.map((u) => u.id),
-        objectiveId: this.state.objective.id,
-        fallbackPoint,
-        supplyPoint,
-        ammoMax: 80,
-        startingMorale: 85,
+        id: 'squad-alpha',
+        ids: ['E_heavy', 'E_mortar1', 'E_mortar2', 'E_infNorth', 'E_atNorth'],
+        fallback: { x: 0, y: 0, z: -58 },
+        morale: 90,
+        ammo: 90,
       },
-      this.cover,
-    );
-    this.enemyCommander.registerSquad(brain);
+      {
+        id: 'squad-bravo',
+        ids: ['E_lightTank', 'E_bunkerN', 'E_infWest'],
+        fallback: { x: 0, y: 0, z: -18 },
+        morale: 85,
+        ammo: 70,
+      },
+      {
+        id: 'squad-charlie',
+        ids: ['E_lightTankEast', 'E_atWest', 'E_infEast'],
+        fallback: { x: 18, y: 0, z: -14 },
+        morale: 85,
+        ammo: 70,
+      },
+      {
+        id: 'squad-delta',
+        ids: ['E_atSouth', 'E_infSouth', 'E_bunkerS'],
+        fallback: { x: 0, y: 0, z: 28 },
+        morale: 80,
+        ammo: 65,
+      },
+    ];
+
+    for (const def of squads) {
+      // Only include units that actually exist in the state map.
+      const unitIds = def.ids.filter((id) => this.state.units.has(id));
+      if (!unitIds.length) continue;
+      const brain = new EnemySquadGOAPBrain(
+        {
+          squadId: def.id,
+          unitIds,
+          objectiveId: this.state.objective.id,
+          fallbackPoint: def.fallback,
+          supplyPoint,
+          ammoMax: def.ammo,
+          startingMorale: def.morale,
+        },
+        this.cover,
+      );
+      this.enemyCommander.registerSquad(brain);
+    }
     this.enemyCommander.attachAll(this.state);
   }
 
