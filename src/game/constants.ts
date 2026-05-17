@@ -45,8 +45,8 @@ export const MOVE_ACCELERATION = 8.0;
 export const TACTICAL_CAMERA_DEFAULT = {
   alpha: Math.PI * 0.5,
   beta: Math.PI * 0.25,
-  radius: 220,
-  target: { x: 0, y: 0, z: 30 },
+  radius: 260,
+  target: { x: 0, y: 0, z: 120 },
 } as const;
 export const TACTICAL_CAMERA_MIN_RADIUS = 50;
 export const TACTICAL_CAMERA_MAX_RADIUS = 480;

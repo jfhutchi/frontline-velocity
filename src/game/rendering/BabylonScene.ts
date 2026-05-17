@@ -139,7 +139,7 @@ function buildSkyDome(scene: Scene) {
   skyTexture.update();
 
   const sky = MeshBuilder.CreateSphere('skyDome', {
-    diameter: 560,
+    diameter: 1800,
     segments: 32,
     sideOrientation: Mesh.BACKSIDE,
   }, scene);
