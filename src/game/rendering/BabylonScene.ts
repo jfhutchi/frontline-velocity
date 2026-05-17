@@ -47,8 +47,8 @@ export function createBabylonContext(canvas: HTMLCanvasElement): BabylonContext 
   scene.ambientColor = new Color3(0.20, 0.20, 0.16);
   scene.fogMode = Scene.FOGMODE_LINEAR;
   scene.fogColor = new Color3(0.75, 0.86, 0.92);
-  scene.fogStart = 520;
-  scene.fogEnd = 1600;
+  scene.fogStart = 560;
+  scene.fogEnd = 2200;
   scene.imageProcessingConfiguration.toneMappingEnabled = true;
   scene.imageProcessingConfiguration.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
   scene.imageProcessingConfiguration.exposure = 1.05;
@@ -80,7 +80,7 @@ export function createBabylonContext(canvas: HTMLCanvasElement): BabylonContext 
   camera.lowerRadiusLimit = TACTICAL_CAMERA_MIN_RADIUS;
   camera.upperRadiusLimit = TACTICAL_CAMERA_MAX_RADIUS;
   camera.minZ = 0.5;
-  camera.maxZ = 600;
+  camera.maxZ = 2800;
   camera.wheelDeltaPercentage = 0.04;
   camera.panningSensibility = 50;
 
@@ -170,7 +170,7 @@ function buildSkyDome(scene: Scene) {
   skyTexture.update();
 
   const sky = MeshBuilder.CreateSphere('skyDome', {
-    diameter: 560,
+    diameter: 1800,
     segments: 32,
     sideOrientation: Mesh.BACKSIDE,
   }, scene);

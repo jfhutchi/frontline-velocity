@@ -466,6 +466,8 @@ export class UnitRenderer {
       vis.turretPivot.rotation.y = unit.turretRotation;
     }
 
+
+
     this.orientHealthBarPivot(vis, unit);
 
     const recentlyHit = unit.lastDamagedAt !== undefined && simTime - unit.lastDamagedAt < 1.2;
