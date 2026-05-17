@@ -70,7 +70,7 @@ export const UNIT_TEMPLATES: Record<UnitType, UnitTemplate> = {
     armor: 0,
     speed: 3.2,
     radius: 0.8,
-    isPlayerControllable: false,
+    isPlayerControllable: true,
     weapon: {
       name: 'Rifle Fire',
       damage: 5,
@@ -85,7 +85,7 @@ export const UNIT_TEMPLATES: Record<UnitType, UnitTemplate> = {
     armor: 25,
     speed: 7,
     radius: 1.4,
-    isPlayerControllable: false,
+    isPlayerControllable: true,
     weapon: {
       name: '47mm Cannon',
       damage: 30,
@@ -101,7 +101,7 @@ export const UNIT_TEMPLATES: Record<UnitType, UnitTemplate> = {
     armor: 5,
     speed: 0,
     radius: 1.1,
-    isPlayerControllable: false,
+    isPlayerControllable: true,
     weapon: {
       name: 'AT Gun',
       damage: 55,
@@ -117,7 +117,7 @@ export const UNIT_TEMPLATES: Record<UnitType, UnitTemplate> = {
     armor: 0,
     speed: 0,
     radius: 1.0,
-    isPlayerControllable: false,
+    isPlayerControllable: true,
     weapon: {
       name: '81mm Mortar',
       damage: 42,

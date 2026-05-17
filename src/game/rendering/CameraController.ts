@@ -103,19 +103,23 @@ export class CameraController {
     const sin = Math.sin(yaw);
     const cos = Math.cos(yaw);
     const chaseBack =
-      unit.type === 'reconJeep' ? 5.2 :
-      unit.type === 'heavyTank' ? 5.35 :
+      unit.type === 'reconJeep'  ? 5.2  :
+      unit.type === 'heavyTank'  ? 5.35 :
+      unit.type === 'infantry'   ? 2.8  :
       4.25;
     const chaseHeight =
-      unit.type === 'reconJeep' ? 3.0 :
-      unit.type === 'heavyTank' ? 3.55 :
+      unit.type === 'reconJeep'  ? 3.0  :
+      unit.type === 'heavyTank'  ? 3.55 :
+      unit.type === 'infantry'   ? 1.8  :
       2.95;
     const aimHeight =
-      unit.type === 'reconJeep' ? 1.65 :
-      unit.type === 'heavyTank' ? 2.55 :
+      unit.type === 'reconJeep'  ? 1.65 :
+      unit.type === 'heavyTank'  ? 2.55 :
+      unit.type === 'infantry'   ? 1.2  :
       2.2;
     const targetAhead =
-      unit.type === 'reconJeep' ? 34 :
+      unit.type === 'reconJeep'  ? 34   :
+      unit.type === 'infantry'   ? 16   :
       32;
     const shake = this.consumeShake();
     const desiredPosition = new Vector3(
