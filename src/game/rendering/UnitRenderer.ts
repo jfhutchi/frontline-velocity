@@ -506,25 +506,9 @@ export class UnitRenderer {
       vis.attackLine = undefined;
     }
 
-    // Infantry procedural walk cycle — bob torso + swing legs when moving.
+    // Infantry procedural walk cycle — velocity-blended bob + leg swing.
     if (vis.soldiers && !unit.isDestroyed) {
-      const walking = unit.currentSpeed > 0.25;
-      // Step frequency: ~7.5 rad/s ≈ 1.2 footfalls/sec; body bobs at twice that.
-      const freq = 7.5;
-      for (const s of vis.soldiers) {
-        if (walking) {
-          const phase = simTime * freq + s.phase;
-          s.torso.position.y = s.baseTorsoY + Math.sin(phase * 2) * 0.028;
-          s.head.position.y = s.torso.position.y + (s.baseHeadY - s.baseTorsoY);
-          s.legL.rotation.x = Math.sin(phase) * 0.38;
-          s.legR.rotation.x = -Math.sin(phase) * 0.38;
-        } else {
-          s.torso.position.y = s.baseTorsoY;
-          s.head.position.y = s.baseHeadY;
-          s.legL.rotation.x = 0;
-          s.legR.rotation.x = 0;
-        }
-      }
+      this.animateInfantryWalk(vis.soldiers, unit, simTime);
     }
   }
 
@@ -575,6 +559,26 @@ export class UnitRenderer {
       ],
     }, this.scene);
     vis.attackLine.color = unit.faction === 'friendly' ? new Color3(0.55, 0.8, 1) : new Color3(1, 0.45, 0.28);
+  }
+
+  /**
+   * Velocity-blended infantry walk cycle. Bob amplitude, leg swing, and step
+   * frequency all scale with speed so soldiers stand still when idle and march
+   * briskly when moving at full speed. Phase is offset per soldier so squads
+   * look staggered.
+   */
+  private animateInfantryWalk(soldiers: InfantrySoldier[], unit: Unit, simTime: number) {
+    const speedFrac = unit.speed > 0 ? Math.min(1, Math.max(0, unit.currentSpeed / unit.speed)) : 0;
+    const freq = 5.0 + speedFrac * 5.0; // 5–10 rad/s (≈ 0.8–1.6 Hz)
+    const bobAmp = speedFrac * 0.028;
+    const swingAmp = speedFrac * 0.38;
+    for (const s of soldiers) {
+      const phase = simTime * freq + s.phase;
+      s.torso.position.y = s.baseTorsoY + Math.sin(phase * 2) * bobAmp;
+      s.head.position.y = s.torso.position.y + (s.baseHeadY - s.baseTorsoY);
+      s.legL.rotation.x = Math.sin(phase) * swingAmp;
+      s.legR.rotation.x = -Math.sin(phase) * swingAmp;
+    }
   }
 
   private mesh(name: string, mesh: Mesh, material: PBRMaterial, parent: TransformNode): Mesh {

@@ -2,9 +2,11 @@ import {
   Color3,
   Color4,
   DynamicTexture,
+  Matrix,
   MeshBuilder,
   PBRMaterial,
   ParticleSystem,
+  Quaternion,
   Scene,
   ShadowGenerator,
   StandardMaterial,
@@ -40,7 +42,12 @@ export class TerrainRenderer {
     ground.receiveShadows = true;
     this.meshes.push(ground);
 
+    const treeDecs: MapDecoration[] = [];
     for (const d of mission.decorations) {
+      if (d.kind === 'tree') {
+        treeDecs.push(d);
+        continue;
+      }
       const m = this.buildDecoration(d);
       if (m) {
         this.meshes.push(m);
@@ -49,6 +56,7 @@ export class TerrainRenderer {
         }
       }
     }
+    this.buildTreeInstances(treeDecs);
 
     this.buildBattlefieldDetails(size);
     this.objectiveRing = this.buildObjectiveRing(mission.objective);
@@ -233,7 +241,7 @@ export class TerrainRenderer {
       case 'building':
         return this.buildBuilding(d);
       case 'tree':
-        return this.buildTree(d);
+        return null; // handled via thin instances in buildTreeInstances()
       case 'hill':
         return this.buildHill(d);
       case 'hedgerow':
@@ -617,6 +625,135 @@ export class TerrainRenderer {
       }
     }
     return trunk;
+  }
+
+  /**
+   * Replace ~330 individual tree meshes with 7 archetype meshes driven by
+   * ThinInstances. Each archetype is built at a representative scale and each
+   * instance matrix encodes the per-tree position, rotation, and size.
+   *
+   * Before: ~55 pines×3 + ~30 oaks×5 + ~20 shrubs×2 ≈ 330 draw calls from trees.
+   * After: 3 pine + 2 oak + 2 shrub = 7 draw calls regardless of tree count.
+   */
+  private buildTreeInstances(trees: MapDecoration[]) {
+    if (!trees.length) return;
+    const pines = trees.filter((t) => t.tint === 'pine');
+    const oaks = trees.filter((t) => t.tint === 'oak');
+    const shrubs = trees.filter((t) => t.tint === 'shrub');
+    if (pines.length) this.buildPineThinInstances(pines);
+    if (oaks.length) this.buildOakThinInstances(oaks);
+    if (shrubs.length) this.buildShrubThinInstances(shrubs);
+  }
+
+  /**
+   * Build the per-instance matrix buffer for a set of tree decorations.
+   * scaleMode: 'yOnly' applies Scale(1, sy/ref, 1); 'uniform' applies Scale(k,k,k).
+   */
+  private treeMatrices(
+    trees: MapDecoration[],
+    scaleMode: 'yOnly' | 'uniform',
+    refSy: number,
+  ): Float32Array {
+    const buf = new Float32Array(trees.length * 16);
+    const tmp = Matrix.Identity();
+    trees.forEach((d, i) => {
+      const k = d.scale.y / refSy;
+      const scale = scaleMode === 'yOnly' ? new Vector3(1, k, 1) : new Vector3(k, k, k);
+      Matrix.ComposeToRef(
+        scale,
+        Quaternion.RotationYawPitchRoll(d.rotation, 0, 0),
+        new Vector3(d.position.x, 0, d.position.z),
+        tmp,
+      );
+      tmp.copyToArray(buf, i * 16);
+    });
+    return buf;
+  }
+
+  /** Register a mesh as a thin-instanced archetype, baking a Y-center lift into vertices. */
+  private thinArch(mesh: Mesh, mat: PBRMaterial, yCenter: number, matrices: Float32Array): Mesh {
+    mesh.material = mat;
+    mesh.receiveShadows = true;
+    this.shadowGenerator?.addShadowCaster(mesh);
+    if (yCenter !== 0) mesh.bakeTransformIntoVertices(Matrix.Translation(0, yCenter, 0));
+    mesh.thinInstanceSetBuffer('matrix', matrices, 16);
+    this.meshes.push(mesh);
+    return mesh;
+  }
+
+  private buildPineThinInstances(trees: MapDecoration[]) {
+    // Archetype at sy = 4 (representative mid-point of the 3–5.5 sy range).
+    // Per-instance scale: Scale(1, sy/4, 1) → trunk height and foliage position
+    // scale nearly linearly with sy, error < 0.1 units at the extremes.
+    const REF = 4.0;
+    const trunkH = REF * 0.38;            // 1.52
+    const foliageH = REF * 0.82;          // 3.28
+    const lowerH = foliageH * 0.58;       // 1.9024
+    const fUpperY = trunkH + foliageH / 2 - 0.18;  // 2.98
+    const fLowerY = trunkH + foliageH * 0.24;       // 2.3072
+    const mats = this.treeMatrices(trees, 'yOnly', REF);
+    const trunkMat = this.material('pine_trunk_mat', COLOR.treeTrunk);
+    const folMat = this.material('pine_fol_mat', COLOR.treePine);
+    const folLowMat = this.material('pine_fol_low_mat', colorVariant(COLOR.treePine, 'pine_low', 0.045));
+    this.thinArch(
+      MeshBuilder.CreateCylinder('pine_trunk_arch', { height: trunkH, diameter: 0.42 + REF * 0.035, tessellation: 8 }, this.scene),
+      trunkMat, trunkH / 2, mats,
+    );
+    this.thinArch(
+      MeshBuilder.CreateCylinder('pine_fol_upper_arch', { height: foliageH, diameterTop: 0.18, diameterBottom: 2.15 + REF * 0.16, tessellation: 8 }, this.scene),
+      folMat, fUpperY, mats,
+    );
+    this.thinArch(
+      MeshBuilder.CreateCylinder('pine_fol_lower_arch', { height: lowerH, diameterTop: 0.28, diameterBottom: 2.65 + REF * 0.2, tessellation: 9 }, this.scene),
+      folLowMat, fLowerY, mats,
+    );
+  }
+
+  private buildOakThinInstances(trees: MapDecoration[]) {
+    // Archetype at sy = 4; uniform Scale(sy/4, sy/4, sy/4) per instance.
+    // Position error ≤ 0.25 units at the sy extremes — imperceptible from tactical altitude.
+    const REF = 4.0;
+    const trunkH = Math.max(0.6, REF * 0.38);  // 1.52
+    const trunkDiam = 0.42 + REF * 0.035;       // 0.56
+    const diam = 2.0 + REF * 0.32;              // 3.28
+    const foliageY = trunkH / 2 + diam * 0.34;  // 1.875
+    const mats = this.treeMatrices(trees, 'uniform', REF);
+    const trunkMat = this.material('oak_trunk_mat', COLOR.treeTrunk);
+    const folMat = this.material('oak_fol_mat', COLOR.treeOak);
+    this.thinArch(
+      MeshBuilder.CreateCylinder('oak_trunk_arch', { height: trunkH, diameter: trunkDiam, tessellation: 8 }, this.scene),
+      trunkMat, trunkH / 2, mats,
+    );
+    // Bake the Y-flattening (scaling.y=0.86) and foliage offset together.
+    const fMesh = MeshBuilder.CreateSphere('oak_fol_arch', { diameter: diam, segments: 7 }, this.scene);
+    fMesh.scaling.y = 0.86;
+    fMesh.position.y = foliageY;
+    fMesh.bakeCurrentTransformIntoVertices();
+    fMesh.scaling = Vector3.One();
+    fMesh.position = Vector3.Zero();
+    this.thinArch(fMesh, folMat, 0, mats);
+  }
+
+  private buildShrubThinInstances(trees: MapDecoration[]) {
+    // Shrub sy range: 1.1–1.9 → use REF = 1.5; uniform scale so the whole shrub scales.
+    const REF = 1.5;
+    const trunkH = 0.28;
+    const sphereDiam = REF * 1.55;             // 2.325
+    const foliageY = trunkH / 2 + sphereDiam * 0.34;  // 0.93
+    const mats = this.treeMatrices(trees, 'uniform', REF);
+    const trunkMat = this.material('shrub_trunk_mat', COLOR.treeTrunk);
+    const folMat = this.material('shrub_fol_mat', COLOR.shrub);
+    this.thinArch(
+      MeshBuilder.CreateCylinder('shrub_trunk_arch', { height: trunkH, diameter: 0.18, tessellation: 8 }, this.scene),
+      trunkMat, trunkH / 2, mats,
+    );
+    const fMesh = MeshBuilder.CreateSphere('shrub_fol_arch', { diameter: sphereDiam, segments: 7 }, this.scene);
+    fMesh.scaling.y = 0.62;
+    fMesh.position.y = foliageY;
+    fMesh.bakeCurrentTransformIntoVertices();
+    fMesh.scaling = Vector3.One();
+    fMesh.position = Vector3.Zero();
+    this.thinArch(fMesh, folMat, 0, mats);
   }
 
   private buildHill(d: MapDecoration): Mesh {
