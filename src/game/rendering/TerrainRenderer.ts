@@ -1,7 +1,10 @@
 import {
   Color3,
+  Color4,
   DynamicTexture,
   MeshBuilder,
+  PBRMaterial,
+  ParticleSystem,
   Scene,
   ShadowGenerator,
   StandardMaterial,
@@ -16,6 +19,7 @@ export class TerrainRenderer {
   private scene: Scene;
   private shadowGenerator?: ShadowGenerator;
   private meshes: Mesh[] = [];
+  private particleSystems: ParticleSystem[] = [];
   private objectiveRing?: Mesh;
   /** Per-building visual roots so we can swap them to rubble on destruction. */
   private buildingVisuals = new Map<string, { mesh: Mesh; rubble?: Mesh; destroyed: boolean }>();
@@ -109,7 +113,7 @@ export class TerrainRenderer {
    * gravel near roads. Avoids relying on any external asset while producing a
    * less flat, more believable battlefield surface.
    */
-  private buildGroundMaterial(size: number): StandardMaterial {
+  private buildGroundMaterial(size: number): PBRMaterial {
     const tex = new DynamicTexture('groundDyn', { width: 1024, height: 1024 }, this.scene, true);
     const ctx = tex.getContext() as CanvasRenderingContext2D;
     // Base grass tone.
@@ -153,19 +157,20 @@ export class TerrainRenderer {
     }
     tex.update();
 
-    const mat = new StandardMaterial('groundMat', this.scene);
+    const mat = new PBRMaterial('groundMat', this.scene);
     const tile = Math.max(2, size / 80);
     tex.uScale = tile;
     tex.vScale = tile;
-    mat.diffuseTexture = tex;
-    mat.diffuseColor = new Color3(1, 1, 1);
-    mat.specularColor = new Color3(0.02, 0.02, 0.02);
+    mat.albedoTexture = tex;
+    mat.albedoColor = new Color3(1, 1, 1);
+    mat.metallic = 0;
+    mat.roughness = 0.95;
     return mat;
   }
 
   updateObjective(objective: ObjectiveZone) {
     if (!this.objectiveRing) return;
-    const mat = this.objectiveRing.material as StandardMaterial | null;
+    const mat = this.objectiveRing.material as PBRMaterial | null;
     if (!mat) return;
     if (objective.captured) {
       mat.emissiveColor = new Color3(0.2, 0.8, 0.3);
@@ -763,7 +768,6 @@ export class TerrainRenderer {
   private buildBattlefieldDetails(size: number) {
     const craterMat = this.material('crater_scars_mat', { r: 0.14, g: 0.12, b: 0.09 });
     craterMat.alpha = 0.58;
-    craterMat.specularColor = new Color3(0, 0, 0);
     const rimMat = this.material('crater_rim_mat', { r: 0.31, g: 0.25, b: 0.17 });
     rimMat.alpha = 0.5;
     const trackMat = this.material('track_scars_mat', { r: 0.18, g: 0.15, b: 0.1 });
@@ -815,12 +819,20 @@ export class TerrainRenderer {
       this.meshes.push(track);
     }
 
-    const smokeMat = this.material('ambient_smoke_mat', { r: 0.2, g: 0.19, b: 0.17 });
-    smokeMat.alpha = 0.16;
-    smokeMat.specularColor = new Color3(0, 0, 0);
-    const darkSmokeMat = this.material('ambient_smoke_dark_mat', { r: 0.08, g: 0.075, b: 0.065 });
-    darkSmokeMat.alpha = 0.24;
-    darkSmokeMat.specularColor = new Color3(0, 0, 0);
+    // Procedural puff texture: soft radial alpha disc
+    const puffTex = new DynamicTexture('smoke_puff_tex', { width: 64, height: 64 }, this.scene, false);
+    puffTex.hasAlpha = true;
+    const puffCtx = puffTex.getContext() as CanvasRenderingContext2D;
+    const puffGrad = puffCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    puffGrad.addColorStop(0, 'rgba(210,200,185,0.9)');
+    puffGrad.addColorStop(0.55, 'rgba(160,152,140,0.45)');
+    puffGrad.addColorStop(1, 'rgba(110,105,98,0)');
+    puffCtx.fillStyle = puffGrad;
+    puffCtx.beginPath();
+    puffCtx.arc(32, 32, 32, 0, Math.PI * 2);
+    puffCtx.fill();
+    puffTex.update();
+
     const smokeSources = [
       { x: -12, z: -18, scale: 1.35, drift: 0.5 },
       { x: 24, z: -24, scale: 1.18, drift: -0.25 },
@@ -828,25 +840,28 @@ export class TerrainRenderer {
       { x: 3, z: 16, scale: 0.92, drift: 0.25 },
     ];
     smokeSources.forEach((source, sourceIdx) => {
-      for (let i = 0; i < 11; i += 1) {
-        const puff = MeshBuilder.CreateSphere(`ambient_smoke_${sourceIdx}_${i}`, {
-          diameter: (2.4 + i * 0.5) * source.scale,
-          segments: 8,
-        }, this.scene);
-        puff.position = new Vector3(
-          source.x + Math.sin(i * 1.7) * (0.45 + i * 0.14) + source.drift * i * 0.18,
-          2.0 + i * 1.62,
-          source.z + Math.cos(i * 1.2) * (0.45 + i * 0.16),
-        );
-        puff.scaling.y = 0.86 + i * 0.1;
-        puff.material = i > 5 ? darkSmokeMat : smokeMat;
-        this.meshes.push(puff);
-      }
+      const ps = new ParticleSystem(`smoke_ps_${sourceIdx}`, 60, this.scene);
+      ps.particleTexture = puffTex;
+      ps.emitter = new Vector3(source.x, 1.8, source.z);
+      ps.minSize = 1.4 * source.scale;
+      ps.maxSize = 4.2 * source.scale;
+      ps.minLifeTime = 3.0;
+      ps.maxLifeTime = 5.5;
+      ps.emitRate = 5;
+      ps.color1 = new Color4(0.42, 0.40, 0.37, 0.65);
+      ps.color2 = new Color4(0.26, 0.25, 0.23, 0.32);
+      ps.colorDead = new Color4(0.10, 0.10, 0.09, 0);
+      ps.direction1 = new Vector3(-0.2 + source.drift * 0.4, 1.0, -0.2);
+      ps.direction2 = new Vector3(0.2 + source.drift * 0.4, 1.9, 0.2);
+      ps.minAngularSpeed = -0.4;
+      ps.maxAngularSpeed = 0.4;
+      ps.gravity = new Vector3(0, 0.04, 0);
+      ps.start();
+      this.particleSystems.push(ps);
     });
 
     const dustMat = this.material('road_dust_mat', { r: 0.58, g: 0.48, b: 0.32 });
     dustMat.alpha = 0.18;
-    dustMat.specularColor = Color3.Black();
     const dustPatches = [
       { x: -10, z: 64, sx: 18, sz: 8, rot: -0.28 },
       { x: 18, z: 54, sx: 14, sz: 7, rot: 0.22 },
@@ -921,7 +936,7 @@ export class TerrainRenderer {
     ground.refreshBoundingInfo();
   }
 
-  private surfaceMaterial(name: string, c: { r: number; g: number; b: number }, kind: 'wall' | 'roof'): StandardMaterial {
+  private surfaceMaterial(name: string, c: { r: number; g: number; b: number }, kind: 'wall' | 'roof'): PBRMaterial {
     const tex = new DynamicTexture(`${name}_texture`, { width: 256, height: 256 }, this.scene, true);
     const ctx = tex.getContext() as CanvasRenderingContext2D;
     ctx.fillStyle = rgbString(c);
@@ -972,17 +987,19 @@ export class TerrainRenderer {
     }
     tex.update();
 
-    const mat = new StandardMaterial(name, this.scene);
-    mat.diffuseTexture = tex;
-    mat.diffuseColor = Color3.White();
-    mat.specularColor = new Color3(0.018, 0.015, 0.012);
+    const mat = new PBRMaterial(name, this.scene);
+    mat.albedoTexture = tex;
+    mat.albedoColor = Color3.White();
+    mat.metallic = 0;
+    mat.roughness = kind === 'roof' ? 0.86 : 0.82;
     return mat;
   }
 
-  private material(name: string, c: { r: number; g: number; b: number }): StandardMaterial {
-    const mat = new StandardMaterial(name, this.scene);
-    mat.diffuseColor = new Color3(c.r, c.g, c.b);
-    mat.specularColor = new Color3(0.015, 0.015, 0.012);
+  private material(name: string, c: { r: number; g: number; b: number }): PBRMaterial {
+    const mat = new PBRMaterial(name, this.scene);
+    mat.albedoColor = new Color3(c.r, c.g, c.b);
+    mat.metallic = 0;
+    mat.roughness = 0.88;
     return mat;
   }
 
@@ -996,6 +1013,11 @@ export class TerrainRenderer {
       m.dispose(false, true);
     }
     this.meshes = [];
+    for (const ps of this.particleSystems) {
+      ps.stop();
+      ps.dispose();
+    }
+    this.particleSystems = [];
     this.objectiveRing = undefined;
     this.buildingVisuals.clear();
   }

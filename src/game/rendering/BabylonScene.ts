@@ -1,7 +1,9 @@
 import {
   ArcRotateCamera,
+  CascadedShadowGenerator,
   Color3,
   Color4,
+  ColorCurves,
   DirectionalLight,
   DynamicTexture,
   Engine,
@@ -9,13 +11,13 @@ import {
   Mesh,
   MeshBuilder,
   Scene,
-  ShadowGenerator,
   StandardMaterial,
   Vector3,
 } from '@babylonjs/core';
 import { GlowLayer } from '@babylonjs/core/Layers/glowLayer';
 import { ImageProcessingConfiguration } from '@babylonjs/core/Materials/imageProcessingConfiguration';
 import { DefaultRenderingPipeline } from '@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/defaultRenderingPipeline';
+import { SSAO2RenderingPipeline } from '@babylonjs/core/PostProcesses/RenderPipeline/Pipelines/ssao2RenderingPipeline';
 import { TACTICAL_CAMERA_MAX_BETA, TACTICAL_CAMERA_MIN_BETA, TACTICAL_CAMERA_MAX_RADIUS, TACTICAL_CAMERA_MIN_RADIUS } from '../constants';
 
 export interface BabylonContext {
@@ -24,7 +26,7 @@ export interface BabylonContext {
   camera: ArcRotateCamera;
   hemiLight: HemisphericLight;
   sunLight: DirectionalLight;
-  shadowGenerator: ShadowGenerator;
+  shadowGenerator: CascadedShadowGenerator;
   glowLayer: GlowLayer;
   pipeline: DefaultRenderingPipeline;
 }
@@ -32,7 +34,7 @@ export interface BabylonContext {
 export function createBabylonContext(canvas: HTMLCanvasElement): BabylonContext {
   const engine = new Engine(canvas, true, {
     preserveDrawingBuffer: false,
-    stencil: false,
+    stencil: true,
     antialias: true,
     adaptToDeviceRatio: true,
   });
@@ -41,19 +43,29 @@ export function createBabylonContext(canvas: HTMLCanvasElement): BabylonContext 
   engine.setHardwareScalingLevel(isTouchDevice && ratio > 1 ? Math.min(1.6, Math.max(1, ratio / 1.45)) : 1);
 
   const scene = new Scene(engine);
-  scene.clearColor = new Color4(0.66, 0.78, 0.88, 1);
-  scene.ambientColor = new Color3(0.34, 0.34, 0.29);
+  scene.clearColor = new Color4(0.60, 0.72, 0.84, 1);
+  scene.ambientColor = new Color3(0.20, 0.20, 0.16);
   scene.fogMode = Scene.FOGMODE_LINEAR;
-  scene.fogColor = new Color3(0.75, 0.86, 0.92);
+  scene.fogColor = new Color3(0.72, 0.83, 0.90);
   scene.fogStart = 235;
   scene.fogEnd = 720;
   scene.imageProcessingConfiguration.toneMappingEnabled = true;
   scene.imageProcessingConfiguration.toneMappingType = ImageProcessingConfiguration.TONEMAPPING_ACES;
-  scene.imageProcessingConfiguration.exposure = 1.12;
-  scene.imageProcessingConfiguration.contrast = 1.22;
+  scene.imageProcessingConfiguration.exposure = 1.05;
+  scene.imageProcessingConfiguration.contrast = 1.26;
   scene.imageProcessingConfiguration.vignetteEnabled = true;
   scene.imageProcessingConfiguration.vignetteWeight = 0.34;
   scene.imageProcessingConfiguration.vignetteColor = new Color4(0.05, 0.045, 0.036, 1);
+
+  // Warm Normandy color grading: lifted shadows, warm midtones, slightly desaturated greens
+  const curves = new ColorCurves();
+  curves.globalSaturation = 88;
+  curves.shadowsExposure = 0.08;   // lift shadows — Generals-era RTS look
+  curves.shadowsHue = 210;         // cool shadows
+  curves.highlightsHue = 30;       // warm highlights
+  curves.highlightsExposure = -0.04;
+  scene.imageProcessingConfiguration.colorCurvesEnabled = true;
+  scene.imageProcessingConfiguration.colorCurves = curves;
 
   const camera = new ArcRotateCamera(
     'tactical-cam',
@@ -74,18 +86,28 @@ export function createBabylonContext(canvas: HTMLCanvasElement): BabylonContext 
 
   // Don't auto-attach inputs; CameraController owns input wiring per mode.
   const hemiLight = new HemisphericLight('hemi', new Vector3(0.2, 1, 0.1), scene);
-  hemiLight.intensity = 0.82;
+  hemiLight.intensity = 0.68;
   hemiLight.groundColor = new Color3(0.22, 0.17, 0.11);
 
   const sunLight = new DirectionalLight('sun', new Vector3(-0.46, -0.78, -0.26), scene);
   sunLight.intensity = 1.68;
   sunLight.position = new Vector3(92, 112, 72);
   sunLight.shadowMinZ = 20;
-  sunLight.shadowMaxZ = 260;
-  const shadowGenerator = new ShadowGenerator(2048, sunLight);
+  sunLight.shadowMaxZ = 220;
+
+  // CascadedShadowGenerator — better depth split across the tactical view distance
+  const shadowGenerator = new CascadedShadowGenerator(1024, sunLight);
+  shadowGenerator.numCascades = 4;
+  shadowGenerator.stabilizeCascades = true;
+  shadowGenerator.lambda = 0.5;
+  shadowGenerator.shadowMaxZ = 220;
   shadowGenerator.useBlurExponentialShadowMap = true;
   shadowGenerator.blurKernel = 22;
   shadowGenerator.setDarkness(0.28);
+
+  // IBL: Babylon's built-in .env gives PBR materials something to reflect
+  scene.createDefaultEnvironment({ createSkybox: false, createGround: false });
+  scene.environmentIntensity = 0.65;
 
   const glowLayer = new GlowLayer('battlefield-glow', scene, { blurKernelSize: 32 });
   glowLayer.intensity = 0.16;
@@ -100,6 +122,15 @@ export function createBabylonContext(canvas: HTMLCanvasElement): BabylonContext 
   pipeline.sharpenEnabled = true;
   pipeline.sharpen.edgeAmount = 0.18;
   pipeline.sharpen.colorAmount = 0.55;
+
+  // SSAO2 — contact shadows on terrain and vehicles; skip on touch (perf)
+  if (!isTouchDevice) {
+    const ssao = new SSAO2RenderingPipeline('ssao', scene, { ssaoRatio: 0.5, blurRatio: 1 }, [camera]);
+    ssao.radius = 2.5;
+    ssao.totalStrength = 1.2;
+    ssao.base = 0.3;
+  }
+
   buildSkyDome(scene);
   buildCloudBanks(scene);
 
@@ -115,9 +146,9 @@ function buildSkyDome(scene: Scene) {
   const skyTexture = new DynamicTexture('proceduralSky', { width: 1024, height: 512 }, scene, true);
   const ctx = skyTexture.getContext() as CanvasRenderingContext2D;
   const gradient = ctx.createLinearGradient(0, 0, 0, 512);
-  gradient.addColorStop(0, '#c5e6ff');
-  gradient.addColorStop(0.42, '#e5f1f4');
-  gradient.addColorStop(1, '#e4c68b');
+  gradient.addColorStop(0, '#b8d8f8');
+  gradient.addColorStop(0.42, '#dceef4');
+  gradient.addColorStop(1, '#e0bf82');
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, 1024, 512);
 
