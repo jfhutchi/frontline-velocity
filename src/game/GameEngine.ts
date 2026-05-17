@@ -289,8 +289,9 @@ export class GameEngine {
 
     const dt = Math.min(rawDt, 1 / 30);
 
-    // Hull rotation.
-    unit.rotation += input.turn * DC_TURN_RATE * dt;
+    // Hull rotation.  Negate: Babylon.js positive rotation.y is CCW from above
+    // (a left turn), so we invert to make right-stick = clockwise = right turn.
+    unit.rotation -= input.turn * DC_TURN_RATE * dt;
 
     // Vehicle velocity along forward axis with simple acceleration.
     const dcFwdMax = Math.min(DC_MAX_FORWARD_SPEED, unit.speed);
