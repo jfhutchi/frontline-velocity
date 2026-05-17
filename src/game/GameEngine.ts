@@ -289,11 +289,12 @@ export class GameEngine {
 
     const dt = Math.min(rawDt, 1 / 30);
 
-    // Hull rotation.  Negate: Babylon.js positive rotation.y is CCW from above
-    // (a left turn), so we invert to make right-stick = clockwise = right turn.
-    unit.rotation -= input.turn * DC_TURN_RATE * dt;
+    // Hull rotation.
+    unit.rotation += input.turn * DC_TURN_RATE * dt;
 
     // Vehicle velocity along forward axis with simple acceleration.
+    // Speed is capped to the unit's own speed stat so infantry can't sprint at
+    // tank pace, and zero-speed weapons (mortar, AT gun) stay stationary.
     const dcFwdMax = Math.min(DC_MAX_FORWARD_SPEED, unit.speed);
     const dcRevMax = Math.min(DC_MAX_REVERSE_SPEED, unit.speed);
     if (input.forward > 0) {

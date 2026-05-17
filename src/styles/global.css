@@ -1213,6 +1213,15 @@ button.danger {
   color: var(--accent);
   font-weight: 600;
 }
+.dc-top-panel .dc-top-sep {
+  color: var(--fg-2);
+  margin: 0 2px;
+}
+.dc-top-panel .dc-top-type {
+  color: var(--fg-1);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
 
 /* ---------- Pause overlay ---------- */
 
@@ -1298,9 +1307,12 @@ button.danger {
 }
 .mobile-controls .return-btn {
   position: absolute;
-  top: max(58px, env(safe-area-inset-top));
-  right: max(14px, env(safe-area-inset-right));
+  bottom: calc(max(24px, env(safe-area-inset-bottom)) + 142px);
+  left: calc(max(24px, env(safe-area-inset-left)) + 140px);
   pointer-events: auto;
+  font-size: 11px;
+  padding: 5px 10px;
+  min-height: 34px;
 }
 .mobile-controls .mobile-jump {
   position: absolute;
