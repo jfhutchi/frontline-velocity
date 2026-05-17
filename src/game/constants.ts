@@ -1,6 +1,6 @@
 // Tunable constants used across the simulation. Times are in seconds, distances in world units (~ meters).
 
-export const MAP_SIZE = 200;
+export const MAP_SIZE = 600;
 export const MAP_HALF = MAP_SIZE / 2;
 
 // Fixed simulation timestep target (Hz).
@@ -45,21 +45,21 @@ export const MOVE_ACCELERATION = 8.0;
 export const TACTICAL_CAMERA_DEFAULT = {
   alpha: Math.PI * 0.5,
   beta: Math.PI * 0.25,
-  radius: 145,
+  radius: 320,
   target: { x: 0, y: 0, z: 14 },
 } as const;
-export const TACTICAL_CAMERA_MIN_RADIUS = 26;
-export const TACTICAL_CAMERA_MAX_RADIUS = 185;
+export const TACTICAL_CAMERA_MIN_RADIUS = 40;
+export const TACTICAL_CAMERA_MAX_RADIUS = 500;
 export const TACTICAL_CAMERA_MIN_BETA = 0.22;
 export const TACTICAL_CAMERA_MAX_BETA = Math.PI * 0.48;
-export const TACTICAL_CAMERA_PAN_SPEED = 58;
+export const TACTICAL_CAMERA_PAN_SPEED = 120;
 export const TACTICAL_CAMERA_FAST_MULTIPLIER = 2.2;
 /** Edge-scroll activation distance from the viewport edge in CSS pixels. */
 export const TACTICAL_EDGE_SCROLL_PIXELS = 28;
 /** Maximum edge-scroll speed in world units / second at the very edge. */
-export const TACTICAL_EDGE_SCROLL_SPEED = 90;
+export const TACTICAL_EDGE_SCROLL_SPEED = 200;
 /** Mouse wheel zoom step in world units per wheel notch. */
-export const TACTICAL_ZOOM_WHEEL_STEP = 12;
+export const TACTICAL_ZOOM_WHEEL_STEP = 22;
 /** How quickly the camera lerps to the desired pan position; higher = snappier. */
 export const TACTICAL_CAMERA_PAN_SMOOTHING = 22;
 /** How quickly zoom interpolates. */
