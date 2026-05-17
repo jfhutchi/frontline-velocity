@@ -467,7 +467,6 @@ export class GameEngine {
     if (!id) return;
     const u = this.simulation.state.units.get(id);
     if (!u || u.isDestroyed || !u.isPlayerControllable) return;
-    if (u.type !== 'mediumTank' && u.type !== 'reconJeep') return;
     AudioManager.play('click');
     store.enterDirectControl();
   }
@@ -655,7 +654,7 @@ function toSummary(u: Unit, time: number, units: Map<string, Unit>): UnitSummary
     targetName: target?.name ?? null,
     isUnderAttack: u.lastDamagedAt !== undefined && time - u.lastDamagedAt < 1.2,
     isDestroyed: u.isDestroyed,
-    isPlayerControllable: u.isPlayerControllable && (u.type === 'mediumTank' || u.type === 'reconJeep'),
+    isPlayerControllable: u.isPlayerControllable,
   };
 }
 
