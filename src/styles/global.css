@@ -248,7 +248,6 @@ button.danger {
   pointer-events: auto;
 }
 .game-ui-panel {
-  backdrop-filter: blur(10px) saturate(1.2);
 }
 
 .tactical-bar-top {
