@@ -96,10 +96,13 @@ export class CameraController {
     }
   }
 
-  /** Third-person over-the-turret chase camera for direct vehicle control. */
+  /** Third-person chase camera for direct vehicle control.
+   *  Uses hull rotation only — turret offset is intentionally excluded so that
+   *  stick directions stay consistent regardless of where the gun was pointing
+   *  when the player jumped in. */
   trackChase(unit: Unit, dt = 1 / 60) {
     if (this.mode !== 'directControl') return;
-    const yaw = unit.rotation + unit.turretRotation * 0.22;
+    const yaw = unit.rotation;
     const sin = Math.sin(yaw);
     const cos = Math.cos(yaw);
     const chaseBack =

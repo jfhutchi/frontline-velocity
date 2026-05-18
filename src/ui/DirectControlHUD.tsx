@@ -21,17 +21,17 @@ export const DirectControlHUD: React.FC<Props> = ({ engine }) => {
 
   return (
     <div className="dc-hud">
+      <div className="dc-top-panel">
+        <span className="name">{u.name}</span>
+        <span className="dc-top-sep"> · </span>
+        <span className="dc-top-type">{u.type}</span>
+      </div>
       <div className="dc-objective-panel game-ui-panel" data-ui-interactive="true">
         <h4>Objective</h4>
         <div className="dc-objective-line">
           <span className={`dc-checkbox${objective?.captured ? ' checked' : ''}`} />
           <span>Capture the crossroads</span>
         </div>
-      </div>
-      <div className="dc-compass">
-        <span>W</span>
-        <span className="active">N</span>
-        <span>NE</span>
       </div>
       <div className="dc-crosshair" />
       <div className="dc-reload-ring" style={{ ['--reload' as string]: `${Math.round(u.reloadProgress * 100)}%` }} />
