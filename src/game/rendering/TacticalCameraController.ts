@@ -22,11 +22,11 @@ import {
  * only feeds it abstract pan/zoom/rotate intents. Smoothed yaw/distance/target
  * keep movement framerate-independent and responsive without feeling jittery.
  *
- * Drag direction convention: middle-mouse drag pans the camera in the same
- * direction the cursor moves — i.e. "drag the world" feel: dragging the cursor
- * left moves the camera target left, revealing terrain on the left. WASD and
- * arrow keys use the negated pan vector so W / up-arrow reads as "push the
- * view forward" (RTS-typical), independent of edge-scroll tuning.
+ * Drag direction convention: middle-mouse drag pans "with the world" — drag
+ * the cursor left and the camera target follows left, revealing terrain on the
+ * left. Keyboard / edge-scroll / virtual-stick intents instead move the camera
+ * itself, so pushing "right" moves the view right. Both share panByWorldAxes()
+ * but the drag path negates its inputs (see panFromScreenDelta).
  */
 export class TacticalCameraController {
   private camera: ArcRotateCamera;
@@ -140,8 +140,11 @@ export class TacticalCameraController {
    * See class-level comment for the chosen drag direction.
    */
   panFromScreenDelta(dx: number, dy: number) {
+    // "Drag the world" feel: the terrain follows the cursor, so the camera
+    // target moves opposite the cursor. Signs are paired with the corrected
+    // right/forward basis in panByWorldAxes().
     const scale = this.desiredRadius * 0.0024;
-    this.panByWorldAxes(dx * scale, -dy * scale);
+    this.panByWorldAxes(-dx * scale, dy * scale);
   }
 
   /** Set edge-scroll vector for this frame, in -1..1 right/forward space. */
@@ -238,10 +241,12 @@ export class TacticalCameraController {
   }
 
   private panByWorldAxes(rightAmount: number, forwardAmount: number) {
-    // Camera right on ground plane: perpendicular to view direction, derived from alpha.
-    // Camera position offset = (cos α, _, sin α) * r, so view direction = (-cos α, 0, -sin α).
-    // right = view × worldUp projected = (sin α, 0, -cos α).
-    const right = { x: Math.sin(this.desiredAlpha), z: -Math.cos(this.desiredAlpha) };
+    // Ground-plane basis derived from the orbit angle alpha.
+    // Camera position offset = (cos α, _, sin α) * r, so the look direction is
+    // (-cos α, 0, -sin α). Babylon renders left-handed, so its LookAtLH builds
+    // camera-right as worldUp × forward = (-sin α, 0, cos α). Using the negated
+    // vector (the old bug) made every pan/keyboard "right" intent move left.
+    const right = { x: -Math.sin(this.desiredAlpha), z: Math.cos(this.desiredAlpha) };
     const forward = { x: -Math.cos(this.desiredAlpha), z: -Math.sin(this.desiredAlpha) };
     this.desiredTarget.x += right.x * rightAmount + forward.x * forwardAmount;
     this.desiredTarget.z += right.z * rightAmount + forward.z * forwardAmount;

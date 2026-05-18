@@ -1,73 +1,95 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef } from 'react';
 
 interface Props {
   onInputChange: (forward: number, turn: number, fire: boolean) => void;
   onReturn: () => void;
-  onFireDown: () => void;
 }
 
+/**
+ * Mobile direct-control HUD: virtual drive stick + fire / return buttons.
+ *
+ * Input is pushed to the engine *synchronously* from each pointer handler so
+ * there is no dependency on React effect timing or callback identity. Pointer
+ * capture is taken on currentTarget, and pointer defaults are prevented so the
+ * browser does not synthesize a compatibility mouse-click (which the
+ * direct-control input layer would otherwise read as a gun-fire).
+ */
 export const MobileTouchControls: React.FC<Props> = ({ onInputChange, onReturn }) => {
   const joystickRef = useRef<HTMLDivElement | null>(null);
   const stickRef = useRef<HTMLDivElement | null>(null);
-  const [forward, setForward] = useState(0);
-  const [turn, setTurn] = useState(0);
-  const [fire, setFire] = useState(false);
-  const trackingId = useRef<number | null>(null);
+  const joyPointer = useRef<number | null>(null);
 
-  useEffect(() => {
-    onInputChange(forward, turn, fire);
-  }, [forward, turn, fire, onInputChange]);
+  // Latest input values; refs so push() always sends current state immediately.
+  const forward = useRef(0);
+  const turn = useRef(0);
+  const fire = useRef(false);
 
-  const handleJoystickMove = (clientX: number, clientY: number) => {
-    const j = joystickRef.current;
-    if (!j) return;
-    const rect = j.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const dx = clientX - cx;
-    const dy = clientY - cy;
-    const max = rect.width / 2 - 12;
+  const push = () => onInputChange(forward.current, turn.current, fire.current);
+
+  const moveStick = (clientX: number, clientY: number) => {
+    const pad = joystickRef.current;
+    if (!pad) return;
+    const rect = pad.getBoundingClientRect();
+    const max = Math.max(1, rect.width / 2 - 12);
+    let dx = clientX - (rect.left + rect.width / 2);
+    let dy = clientY - (rect.top + rect.height / 2);
     const len = Math.hypot(dx, dy);
-    const nx = len > max ? (dx / len) * max : dx;
-    const ny = len > max ? (dy / len) * max : dy;
-    if (stickRef.current) {
-      stickRef.current.style.transform = `translate(${nx}px, ${ny}px)`;
+    if (len > max) {
+      dx = (dx / len) * max;
+      dy = (dy / len) * max;
     }
-    setForward(-ny / max);
-    setTurn(nx / max);
+    if (stickRef.current) {
+      stickRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
+    }
+    forward.current = -dy / max;
+    turn.current = dx / max;
+    push();
   };
 
-  const reset = () => {
+  const releaseStick = () => {
     if (stickRef.current) {
       stickRef.current.style.transform = 'translate(0px, 0px)';
     }
-    setForward(0);
-    setTurn(0);
+    forward.current = 0;
+    turn.current = 0;
+    push();
   };
 
   return (
-    <div className="mobile-controls">
+    <div className="mobile-controls" data-ui-interactive="true">
       <div
         className="joystick"
         ref={joystickRef}
+        data-ui-interactive="true"
+        aria-label="Drive stick"
         onPointerDown={(e) => {
-          (e.target as Element).setPointerCapture?.(e.pointerId);
-          trackingId.current = e.pointerId;
-          handleJoystickMove(e.clientX, e.clientY);
+          e.preventDefault();
+          e.currentTarget.setPointerCapture?.(e.pointerId);
+          joyPointer.current = e.pointerId;
+          moveStick(e.clientX, e.clientY);
         }}
         onPointerMove={(e) => {
-          if (trackingId.current !== e.pointerId) return;
-          handleJoystickMove(e.clientX, e.clientY);
+          if (joyPointer.current !== e.pointerId) return;
+          e.preventDefault();
+          moveStick(e.clientX, e.clientY);
         }}
         onPointerUp={(e) => {
-          if (trackingId.current === e.pointerId) {
-            trackingId.current = null;
-            reset();
-          }
+          if (joyPointer.current !== e.pointerId) return;
+          e.preventDefault();
+          e.currentTarget.releasePointerCapture?.(e.pointerId);
+          joyPointer.current = null;
+          releaseStick();
         }}
-        onPointerCancel={() => {
-          trackingId.current = null;
-          reset();
+        onPointerCancel={(e) => {
+          if (joyPointer.current !== e.pointerId) return;
+          joyPointer.current = null;
+          releaseStick();
+        }}
+        onLostPointerCapture={() => {
+          if (joyPointer.current !== null) {
+            joyPointer.current = null;
+            releaseStick();
+          }
         }}
       >
         <div className="stick" ref={stickRef} />
@@ -75,16 +97,34 @@ export const MobileTouchControls: React.FC<Props> = ({ onInputChange, onReturn }
 
       <button
         className="fire-btn"
-        onPointerDown={() => setFire(true)}
-        onPointerUp={() => setFire(false)}
-        onPointerCancel={() => setFire(false)}
-        onPointerLeave={() => setFire(false)}
+        type="button"
+        data-ui-interactive="true"
+        onPointerDown={(e) => {
+          e.preventDefault();
+          fire.current = true;
+          push();
+        }}
+        onPointerUp={(e) => {
+          e.preventDefault();
+          fire.current = false;
+          push();
+        }}
+        onPointerCancel={() => {
+          fire.current = false;
+          push();
+        }}
+        onPointerLeave={() => {
+          fire.current = false;
+          push();
+        }}
       >
         FIRE
       </button>
 
       <button
         className="return-btn"
+        type="button"
+        data-ui-interactive="true"
         onClick={() => onReturn()}
       >
         Return
