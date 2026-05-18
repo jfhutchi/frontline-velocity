@@ -34,10 +34,10 @@ export const MainMenu: React.FC = () => {
                 'An original spiritual successor to classic desktop tactical / RTS games. ' +
                 'All assets, names, code, and missions in this build are original — no copyrighted ' +
                 'content from any prior commercial title is used. ' +
-                'This build ships the v0.0.6 reference tank-view push: a mobile-safe briefing, ' +
-                'higher tactical camera framing, a third-person over-the-turret tank camera, ' +
-                'denser rural village detail, improved tank silhouettes, closer direct-control ' +
-                'tank framing, stronger battlefield atmosphere, and a cleaner tactical/direct-control HUD.',
+                'This build ships the v0.0.7 direct-control update: all friendly units are now ' +
+                'player-controllable (infantry, light tanks, anti-tank guns, mortars), fixed ' +
+                'third-person camera yaw so stick directions always match the hull, per-unit ' +
+                'speed caps, and a cleaner HUD with no frosted-glass blur.',
             );
           }}
         >
