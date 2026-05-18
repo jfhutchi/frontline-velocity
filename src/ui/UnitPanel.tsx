@@ -80,10 +80,6 @@ export const UnitPanel: React.FC<Props> = ({ engine }) => {
         <span className="value">{unit.orderLabel}</span>
       </div>
       <div className="stat-row">
-        <span>AI State</span>
-        <span className="value">{unit.aiState}</span>
-      </div>
-      <div className="stat-row">
         <span>Target</span>
         <span className="value">{unit.targetName ?? 'None'}</span>
       </div>

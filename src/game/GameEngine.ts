@@ -194,6 +194,9 @@ export class GameEngine {
         this.cameraController.activate('directControl');
         this.directInput.attach();
         this.tacticalInput.detach();
+        // Fresh entry: start from a standstill rather than inheriting the
+        // velocity from a previous direct-control session.
+        this.vehicleVelocity = 0;
       }
       this.applyDirectControl(rawDt, controlledId, speed > 0);
     } else {

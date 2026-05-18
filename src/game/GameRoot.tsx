@@ -228,7 +228,6 @@ export const GameRoot: React.FC = () => {
           <MobileTouchControls
             onInputChange={(forward, turn, fire) => engineRef.current?.setMobileVehicleInput(forward, turn, fire)}
             onReturn={() => engineRef.current?.exitDirectControl()}
-            onFireDown={() => {}}
           />
         )}
       </div>

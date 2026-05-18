@@ -26,8 +26,6 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
   const resume = useGameStore((s) => s.resume);
   const returnToMenu = useGameStore((s) => s.returnToMenu);
   const eventLog = useGameStore((s) => s.eventLog);
-  const showEnemyDebug = useGameStore((s) => s.showEnemyDebug);
-  const toggleEnemyDebug = useGameStore((s) => s.toggleEnemyDebug);
 
   const friendlies = summaries.filter((u) => u.faction === 'friendly');
   const selectedSet = new Set(selectedIds);
@@ -48,33 +46,35 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
           >
             {paused ? 'Resume' : 'Pause'}
           </button>
-          <button
-            className={`command-speed${speedLevel === 'slow' ? ' primary' : ''}`}
-            onClick={() => {
-              AudioManager.play('click');
-              setSpeed('slow');
-            }}
-          >
-            Slow
-          </button>
-          <button
-            className={`command-speed${speedLevel === 'normal' ? ' primary' : ''}`}
-            onClick={() => {
-              AudioManager.play('click');
-              setSpeed('normal');
-            }}
-          >
-            Normal
-          </button>
-          <button
-            className={`command-speed${speedLevel === 'fast' ? ' primary' : ''}`}
-            onClick={() => {
-              AudioManager.play('click');
-              setSpeed('fast');
-            }}
-          >
-            Fast
-          </button>
+          <div className="speed-group" role="group" aria-label="Game speed">
+            <button
+              className={`command-speed${speedLevel === 'slow' ? ' primary' : ''}`}
+              onClick={() => {
+                AudioManager.play('click');
+                setSpeed('slow');
+              }}
+            >
+              Slow
+            </button>
+            <button
+              className={`command-speed${speedLevel === 'normal' ? ' primary' : ''}`}
+              onClick={() => {
+                AudioManager.play('click');
+                setSpeed('normal');
+              }}
+            >
+              Normal
+            </button>
+            <button
+              className={`command-speed${speedLevel === 'fast' ? ' primary' : ''}`}
+              onClick={() => {
+                AudioManager.play('click');
+                setSpeed('fast');
+              }}
+            >
+              Fast
+            </button>
+          </div>
           <button
             className="command-selected"
             disabled={!selectedCount || !engine}
@@ -106,16 +106,7 @@ export const TacticalHUD: React.FC<Props> = ({ engine }) => {
           >
             Reset Cam
           </button>
-          <button
-            className={`command-debug${showEnemyDebug ? ' primary' : ''}`}
-            onClick={() => {
-              AudioManager.play('click');
-              toggleEnemyDebug();
-            }}
-            title="Toggle enemy AI debug overlay ( ] )"
-          >
-            AI Debug
-          </button>
+          <span className="bar-divider" aria-hidden="true" />
           <button
             className="danger command-menu"
             onClick={() => {
