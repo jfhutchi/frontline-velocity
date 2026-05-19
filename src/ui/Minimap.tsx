@@ -107,11 +107,13 @@ export const Minimap: React.FC<Props> = ({ engine }) => {
     if (minimap.cameraFocus) {
       const { px, py } = worldToPx(minimap.cameraFocus.x, minimap.cameraFocus.z);
       const yaw = cameraYaw;
-      // Babylon's ArcRotateCamera alpha=0 looks down -X; our world->minimap maps
-      // world x to canvas x, world z to canvas y. We just want a triangle
-      // pointing roughly in the camera's facing direction.
-      const fx = Math.cos(yaw + Math.PI / 2);
-      const fz = Math.sin(yaw + Math.PI / 2);
+      // The ArcRotateCamera's view direction on the ground plane is
+      // -(cos α, sin α): at α = π/2 (the default) the camera sits at +Z and
+      // looks toward −Z = north, which on the minimap is upward (low py).
+      // Earlier this added π/2 to yaw, which rotated the indicator 90° and
+      // made it point left instead of up at the default camera orientation.
+      const fx = -Math.cos(yaw);
+      const fz = -Math.sin(yaw);
       const len = 10;
       const left = { x: -fz, y: fx };
       ctx.fillStyle = 'rgba(255,255,255,0.18)';

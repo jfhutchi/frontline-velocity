@@ -26,6 +26,67 @@ function deco(
   };
 }
 
+type Aabb2 = { minX: number; maxX: number; minZ: number; maxZ: number };
+
+/** AABB enclosing an oriented box (width × depth, rotated `rot`) around (cx, cz), with optional margin. */
+function obbAabb(cx: number, cz: number, w: number, d: number, rot: number, margin: number): Aabb2 {
+  const c = Math.abs(Math.cos(rot));
+  const s = Math.abs(Math.sin(rot));
+  const halfX = (w * c + d * s) / 2 + margin;
+  const halfZ = (w * s + d * c) / 2 + margin;
+  return { minX: cx - halfX, maxX: cx + halfX, minZ: cz - halfZ, maxZ: cz + halfZ };
+}
+
+function aabbsOverlap(a: Aabb2, b: Aabb2): boolean {
+  return a.minX < b.maxX && a.maxX > b.minX && a.minZ < b.maxZ && a.maxZ > b.minZ;
+}
+
+/**
+ * If a unit's authored spawn position falls inside any building footprint,
+ * shift the unit just outside the building along the shortest axis. The
+ * authored mission file mostly avoids this, but rounding plus rotated
+ * building boxes occasionally end up overlapping infantry / AT-gun spawns
+ * which looked like soldiers standing on top of houses. Run a few passes
+ * because pushing out of one building can land inside the next.
+ */
+function shiftUnitsOutsideBuildings(units: Unit[], decorations: MapDecoration[]) {
+  const buildings = decorations.filter((d) => d.kind === 'building');
+  if (buildings.length === 0) return;
+  for (const unit of units) {
+    for (let pass = 0; pass < 4; pass += 1) {
+      let moved = false;
+      for (const b of buildings) {
+        const margin = unit.radius + 0.4;
+        const halfX = b.scale.x / 2 + margin;
+        const halfZ = b.scale.z / 2 + margin;
+        const dx = unit.position.x - b.position.x;
+        const dz = unit.position.z - b.position.z;
+        const cs = Math.cos(b.rotation);
+        const sn = Math.sin(b.rotation);
+        // Rotate into building local space by -rotation.
+        const lx = dx * cs + dz * sn;
+        const lz = -dx * sn + dz * cs;
+        if (Math.abs(lx) >= halfX || Math.abs(lz) >= halfZ) continue;
+        const slackX = halfX - Math.abs(lx);
+        const slackZ = halfZ - Math.abs(lz);
+        let nx = lx;
+        let nz = lz;
+        if (slackX < slackZ) {
+          nx = (lx >= 0 ? 1 : -1) * halfX;
+        } else {
+          nz = (lz >= 0 ? 1 : -1) * halfZ;
+        }
+        // Rotate back into world space and write through.
+        unit.position.x = b.position.x + nx * cs - nz * sn;
+        unit.position.z = b.position.z + nx * sn + nz * cs;
+        unit.aiHome = { x: unit.position.x, y: 0, z: unit.position.z };
+        moved = true;
+      }
+      if (!moved) break;
+    }
+  }
+}
+
 function buildDecorations(): MapDecoration[] {
   const out: MapDecoration[] = [];
 
@@ -249,13 +310,36 @@ function buildDecorations(): MapDecoration[] {
   });
 
   // ── Field patches ─────────────────────────────────────────────────────────
-  for (let i = 0; i < 38; i += 1) {
+  // Fields paint a tan ground patch and previously got placed by pure random
+  // sampling — they regularly overlapped roads and building footprints, which
+  // looked like crops spilling onto asphalt and over houses. Reject any
+  // candidate whose rotation-expanded AABB intersects an existing road or
+  // building (with a small margin so the eaves still get a green edge).
+  const fieldBlockerKinds = new Set<MapDecoration['kind']>(['road', 'building']);
+  const FIELD_KEEPOUT_MARGIN = 1.5;
+  const placedBoundsForFields = out
+    .filter((d) => fieldBlockerKinds.has(d.kind))
+    .map((d) => obbAabb(d.position.x, d.position.z, d.scale.x, d.scale.z, d.rotation, FIELD_KEEPOUT_MARGIN));
+  const fieldOverlapsStructure = (x: number, z: number, w: number, depth: number, rot: number) => {
+    const candidate = obbAabb(x, z, w, depth, rot, 0);
+    for (const b of placedBoundsForFields) {
+      if (aabbsOverlap(candidate, b)) return true;
+    }
+    return false;
+  };
+  let placedFields = 0;
+  let fieldAttempts = 0;
+  while (placedFields < 38 && fieldAttempts < 38 * 12) {
+    fieldAttempts += 1;
     const x = (rng() - 0.5) * (MAP_SIZE - 40);
     const z = (rng() - 0.5) * (MAP_SIZE - 40);
     if (Math.abs(x) < 16 && Math.abs(z) < 16) continue;
     const w = 10 + rng() * 18;
     const d = 10 + rng() * 18;
-    out.push(deco(`field_${i}`, 'fieldPatch', x, z, rng() * Math.PI, { x: w, y: 0.02, z: d }, 'grass'));
+    const rot = rng() * Math.PI;
+    if (fieldOverlapsStructure(x, z, w, d, rot)) continue;
+    out.push(deco(`field_${placedFields}`, 'fieldPatch', x, z, rot, { x: w, y: 0.02, z: d }, 'grass'));
+    placedFields += 1;
   }
   const setPieceFields: Array<[number, number, number, number, number]> = [
     [ -74,   54,  0.18, 34, 26],
@@ -271,6 +355,7 @@ function buildDecorations(): MapDecoration[] {
     [ 180,   90, -0.30, 40, 30],
   ];
   setPieceFields.forEach(([x, z, rot, w, d], i) => {
+    if (fieldOverlapsStructure(x, z, w, d, rot)) return;
     out.push(deco(`crop_setpiece_${i}`, 'fieldPatch', x, z, rot, { x: w, y: 0.022, z: d }, 'grass'));
   });
 
@@ -451,6 +536,10 @@ export function createOperationCrossroads(): MissionDefinition {
     requiredHoldSeconds: CAPTURE_HOLD_SECONDS,
   });
 
+  const decorations = buildDecorations();
+  const units = buildUnits();
+  shiftUnitsOutsideBuildings(units, decorations);
+
   return {
     id: 'operation-crossroads',
     name: 'Operation Crossroads',
@@ -475,9 +564,9 @@ export function createOperationCrossroads(): MissionDefinition {
       'Seize and hold the central crossroads capture zone for 30 seconds.',
       'Avoid losing all friendly combat units.',
     ],
-    units: buildUnits(),
+    units,
     objective,
     mapSize: MAP_SIZE,
-    decorations: buildDecorations(),
+    decorations,
   };
 }

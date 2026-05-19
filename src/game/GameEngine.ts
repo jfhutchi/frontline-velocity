@@ -179,6 +179,22 @@ export class GameEngine {
     window.setTimeout(() => this.ctx.engine.resize(), 160);
   };
 
+  /**
+   * Force the Babylon engine to recompute its backing buffer over the next
+   * couple of frames. Used when we know the canvas's CSS box is about to
+   * change but the change won't have committed by the current render frame
+   * (e.g. React swapping HUD components on a camera-mode change). One rAF
+   * catches the post-commit layout; a deferred timeout catches anything
+   * that depends on the browser settling its layout after that.
+   */
+  private scheduleEngineResize() {
+    window.requestAnimationFrame(() => {
+      this.ctx.engine.resize();
+      window.requestAnimationFrame(() => this.ctx.engine.resize());
+    });
+    window.setTimeout(() => this.ctx.engine.resize(), 120);
+  }
+
   private frame = () => {
     const now = performance.now() / 1000;
     const rawDt = this.lastFrameTime === 0 ? 1 / 60 : Math.max(0, now - this.lastFrameTime);
@@ -197,6 +213,13 @@ export class GameEngine {
         // Fresh entry: start from a standstill rather than inheriting the
         // velocity from a previous direct-control session.
         this.vehicleVelocity = 0;
+        // The DirectControlHUD mounts on the same frame, which changes the
+        // canvas's CSS box once React commits. Without nudging the engine
+        // the backing buffer stays at its tactical size and the next frame
+        // renders into a stale viewport (blank until the user resizes the
+        // window). Force a resize on the next two frames to catch the
+        // post-commit layout.
+        this.scheduleEngineResize();
       }
       this.applyDirectControl(rawDt, controlledId, speed > 0);
     } else {
@@ -208,6 +231,7 @@ export class GameEngine {
         if (this.prevControlledUnitId) {
           this.simulation.setControlledUnitOrderToHold(this.prevControlledUnitId);
         }
+        this.scheduleEngineResize();
       }
     }
     this.prevControlledUnitId = controlledId;
