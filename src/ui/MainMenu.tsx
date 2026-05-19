@@ -34,10 +34,11 @@ export const MainMenu: React.FC = () => {
                 'An original spiritual successor to classic desktop tactical / RTS games. ' +
                 'All assets, names, code, and missions in this build are original — no copyrighted ' +
                 'content from any prior commercial title is used. ' +
-                'This build ships the v0.0.7 direct-control update: all friendly units are now ' +
-                'player-controllable (infantry, light tanks, anti-tank guns, mortars), fixed ' +
-                'third-person camera yaw so stick directions always match the hull, per-unit ' +
-                'speed caps, and a cleaner HUD with no frosted-glass blur.',
+                'This build ships the v0.0.8 combat-feel pass: infantry squads now volley short ' +
+                'rifle bursts of small tracer bullets instead of single tank-style shells, and ' +
+                'friendly armor (medium / heavy / light tanks and the recon jeep) moves faster ' +
+                'with a raised direct-control speed cap. Infantry, anti-tank guns, and mortars ' +
+                'keep their original speeds.',
             );
           }}
         >

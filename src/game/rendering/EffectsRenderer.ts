@@ -15,6 +15,8 @@ export class EffectsRenderer {
   private effectVisuals = new Map<string, EffectVisual>();
   private projFriendlyMat: PBRMaterial;
   private projEnemyMat: PBRMaterial;
+  private bulletFriendlyMat: PBRMaterial;
+  private bulletEnemyMat: PBRMaterial;
   private mflashMat: PBRMaterial;
   private explosionMat: PBRMaterial;
   private smokeMat: PBRMaterial;
@@ -33,6 +35,19 @@ export class EffectsRenderer {
     this.projEnemyMat.emissiveColor = new Color3(0.95, 0.5, 0.3);
     this.projEnemyMat.metallic = 0;
     this.projEnemyMat.roughness = 1;
+
+    // Rifle bullets read as small bright tracers, distinct from cannon shells.
+    this.bulletFriendlyMat = new PBRMaterial('bulletFr', scene);
+    this.bulletFriendlyMat.albedoColor = new Color3(1.0, 0.95, 0.55);
+    this.bulletFriendlyMat.emissiveColor = new Color3(1.0, 0.92, 0.5);
+    this.bulletFriendlyMat.metallic = 0;
+    this.bulletFriendlyMat.roughness = 1;
+
+    this.bulletEnemyMat = new PBRMaterial('bulletEn', scene);
+    this.bulletEnemyMat.albedoColor = new Color3(1.0, 0.65, 0.35);
+    this.bulletEnemyMat.emissiveColor = new Color3(1.0, 0.55, 0.3);
+    this.bulletEnemyMat.metallic = 0;
+    this.bulletEnemyMat.roughness = 1;
 
     this.mflashMat = new PBRMaterial('mflash', scene);
     this.mflashMat.albedoColor = new Color3(1, 0.85, 0.5);
@@ -64,12 +79,19 @@ export class EffectsRenderer {
       seen.add(p.id);
       let m = this.projectileMeshes.get(p.id);
       if (!m) {
-        m = MeshBuilder.CreateCylinder(`proj_${p.id}`, { diameter: 0.16, height: 2.4, tessellation: 6 }, this.scene);
+        const isBullet = p.kind === 'bullet';
+        m = isBullet
+          ? MeshBuilder.CreateCylinder(`proj_${p.id}`, { diameter: 0.07, height: 0.55, tessellation: 5 }, this.scene)
+          : MeshBuilder.CreateCylinder(`proj_${p.id}`, { diameter: 0.16, height: 2.4, tessellation: 6 }, this.scene);
         m.rotation.x = Math.PI / 2;
-        m.material = p.faction === 'friendly' ? this.projFriendlyMat : this.projEnemyMat;
+        if (isBullet) {
+          m.material = p.faction === 'friendly' ? this.bulletFriendlyMat : this.bulletEnemyMat;
+        } else {
+          m.material = p.faction === 'friendly' ? this.projFriendlyMat : this.projEnemyMat;
+        }
         this.projectileMeshes.set(p.id, m);
       }
-      m.position.set(p.position.x, 1.5, p.position.z);
+      m.position.set(p.position.x, p.kind === 'bullet' ? 1.2 : 1.5, p.position.z);
       m.rotation.y = Math.atan2(p.velocity.x, p.velocity.z);
     }
     for (const [id, mesh] of this.projectileMeshes) {

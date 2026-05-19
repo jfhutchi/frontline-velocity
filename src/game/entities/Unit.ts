@@ -21,7 +21,7 @@ export const UNIT_TEMPLATES: Record<UnitType, UnitTemplate> = {
     type: 'mediumTank',
     health: 100,
     armor: 40,
-    speed: 6,
+    speed: 7.5,
     radius: 1.6,
     isPlayerControllable: true,
     weapon: {
@@ -37,7 +37,7 @@ export const UNIT_TEMPLATES: Record<UnitType, UnitTemplate> = {
     type: 'heavyTank',
     health: 180,
     armor: 65,
-    speed: 4.2,
+    speed: 5.4,
     radius: 1.9,
     isPlayerControllable: true,
     weapon: {
@@ -53,7 +53,7 @@ export const UNIT_TEMPLATES: Record<UnitType, UnitTemplate> = {
     type: 'reconJeep',
     health: 45,
     armor: 10,
-    speed: 11,
+    speed: 13.5,
     radius: 1.0,
     isPlayerControllable: true,
     weapon: {
@@ -72,18 +72,19 @@ export const UNIT_TEMPLATES: Record<UnitType, UnitTemplate> = {
     radius: 0.8,
     isPlayerControllable: true,
     weapon: {
-      name: 'Rifle Fire',
-      damage: 5,
+      // Squad volley: a short burst of automatic-rifle fire, not a single cannon shot.
+      name: 'Rifle Squad',
+      damage: 2,
       range: 22,
-      reloadSeconds: 0.8,
-      projectileSpeed: 60,
+      reloadSeconds: 0.85,
+      projectileSpeed: 90,
     },
   },
   lightTank: {
     type: 'lightTank',
     health: 75,
     armor: 25,
-    speed: 7,
+    speed: 8.5,
     radius: 1.4,
     isPlayerControllable: true,
     weapon: {

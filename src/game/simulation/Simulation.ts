@@ -258,7 +258,7 @@ export class Simulation {
     return true;
   }
 
-  /** Direct-control: spawn a projectile from the controlled unit immediately. */
+  /** Direct-control: spawn a projectile (or rifle burst for infantry) from the controlled unit immediately. */
   fireFromControlled(unitId: string): boolean {
     const u = this.state.units.get(unitId);
     if (!u || u.isDestroyed) return false;
@@ -266,39 +266,70 @@ export class Simulation {
     const aimedAngle = u.rotation + u.turretRotation;
     const sin = Math.sin(aimedAngle);
     const cos = Math.cos(aimedAngle);
+    const isInfantry = u.type === 'infantry';
     const muzzle = {
       x: u.position.x + sin * (u.radius + 0.6),
-      y: 1.6,
+      y: isInfantry ? 1.1 : 1.6,
       z: u.position.z + cos * (u.radius + 0.6),
     };
     const speed = u.weapon.projectileSpeed;
-    this.state.projectiles.push({
-      id: `P_dc_${this.state.time.toFixed(3)}_${u.id}`,
-      ownerId: u.id,
-      faction: u.faction,
-      position: muzzle,
-      velocity: { x: sin * speed, y: 0, z: cos * speed },
-      damage: u.weapon.damage,
-      splashRadius: u.weapon.splashRadius,
-      remainingTime: 4,
-      spawnedAt: this.state.time,
-    });
+
+    if (isInfantry) {
+      // Squad volley: 3 rifle bullets with a small spread so direct-control
+      // infantry visually fires "multiple automatic rifles" instead of one shell.
+      const burst = 3;
+      const spread = 0.05;
+      for (let i = 0; i < burst; i++) {
+        const offset = ((i / (burst - 1)) - 0.5) * 2 * spread;
+        const a = aimedAngle + offset;
+        const bs = Math.sin(a);
+        const bc = Math.cos(a);
+        this.state.projectiles.push({
+          id: `P_dc_${this.state.time.toFixed(3)}_${u.id}_${i}`,
+          ownerId: u.id,
+          faction: u.faction,
+          position: { ...muzzle },
+          velocity: { x: bs * speed, y: 0, z: bc * speed },
+          damage: u.weapon.damage,
+          remainingTime: 2.2,
+          spawnedAt: this.state.time,
+          kind: 'bullet',
+        });
+      }
+    } else {
+      this.state.projectiles.push({
+        id: `P_dc_${this.state.time.toFixed(3)}_${u.id}`,
+        ownerId: u.id,
+        faction: u.faction,
+        position: muzzle,
+        velocity: { x: sin * speed, y: 0, z: cos * speed },
+        damage: u.weapon.damage,
+        splashRadius: u.weapon.splashRadius,
+        remainingTime: 4,
+        spawnedAt: this.state.time,
+        kind: 'shell',
+      });
+    }
+
     u.weapon.lastFiredAt = this.state.time;
     this.state.effects.push({
       id: `mfx_dc_${u.id}_${this.state.time.toFixed(2)}`,
       kind: 'muzzleFlash',
       position: muzzle,
       spawnedAt: this.state.time,
-      duration: 0.08,
+      duration: isInfantry ? 0.05 : 0.08,
+      scale: isInfantry ? 0.5 : undefined,
     });
-    this.state.effects.push({
-      id: `smoke_dc_${u.id}_${this.state.time.toFixed(2)}`,
-      kind: 'smoke',
-      position: { ...muzzle },
-      spawnedAt: this.state.time,
-      duration: 0.45,
-      scale: 0.55,
-    });
+    if (!isInfantry) {
+      this.state.effects.push({
+        id: `smoke_dc_${u.id}_${this.state.time.toFixed(2)}`,
+        kind: 'smoke',
+        position: { ...muzzle },
+        spawnedAt: this.state.time,
+        duration: 0.45,
+        scale: 0.55,
+      });
+    }
     return true;
   }
 

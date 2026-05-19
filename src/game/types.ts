@@ -87,6 +87,8 @@ export interface Unit {
   aiManagedExternally?: boolean;
 }
 
+export type ProjectileKind = 'shell' | 'bullet';
+
 export interface Projectile {
   id: string;
   ownerId: string;
@@ -97,6 +99,8 @@ export interface Projectile {
   remainingTime: number;
   splashRadius?: number;
   spawnedAt: number;
+  /** Visual + audio classification. Defaults to 'shell' for tank cannons; infantry small arms use 'bullet'. */
+  kind?: ProjectileKind;
 }
 
 export interface ObjectiveZone {
