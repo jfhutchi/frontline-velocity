@@ -1,4 +1,4 @@
-import type { Faction, Projectile, Vec3 } from '../types';
+import type { Faction, Projectile, ProjectileKind, Vec3 } from '../types';
 import { nextId } from './Unit';
 
 export function makeProjectile(args: {
@@ -10,6 +10,7 @@ export function makeProjectile(args: {
   splashRadius?: number;
   spawnedAt: number;
   lifetime: number;
+  kind?: ProjectileKind;
 }): Projectile {
   return {
     id: nextId('P'),
@@ -21,5 +22,6 @@ export function makeProjectile(args: {
     splashRadius: args.splashRadius,
     remainingTime: args.lifetime,
     spawnedAt: args.spawnedAt,
+    kind: args.kind ?? 'shell',
   };
 }

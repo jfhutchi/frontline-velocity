@@ -5,7 +5,31 @@ armored platoon trying to capture a defended village crossroads. Issue
 attack-move orders from the tactical command view, then jump into a vehicle and
 fight directly from a third-person combat camera.
 
-**Current version: v0.0.6 - reference tank-view push**
+**Current version: v0.0.8 — rifle squads & faster armor**
+
+## What's new in v0.0.8
+
+v0.0.8 is a focused combat-feel pass:
+
+- Infantry no longer fires single tank-style shells. Each squad now volleys a
+  short burst of three rifle bullets per fire cycle with a small angular
+  spread, rendered as small bright tracers instead of large cannon rounds.
+  Per-bullet damage is rebalanced so squad DPS stays close to v0.0.7.
+- Muzzle flashes for infantry are smaller and produce no cannon smoke puff so
+  rifle fire reads visually distinct from tank cannons.
+- Friendly armor moves faster: medium tank 6 → 7.5, heavy tank 4.2 → 5.4,
+  light tank 7 → 8.5, recon jeep 11 → 13.5. Infantry, anti-tank guns, and
+  mortars are unchanged. Direct-control speed cap raised in lockstep so
+  per-unit speeds are no longer clamped at the engine layer.
+
+## What's new in v0.0.7
+
+- All friendly unit types (infantry, light tanks, anti-tank guns, mortars,
+  and the existing medium/heavy tanks and recon jeep) are player-controllable
+  via `Enter`. Per-unit speed cap means infantry no longer drives at tank
+  pace and stationary weapons (mortar, AT gun) stay put.
+- Direct-control chase camera yaw is fixed so stick/keyboard directions
+  always match the controlled unit's hull rotation.
 
 ## What's new in v0.0.6
 
@@ -280,7 +304,7 @@ summary snapshots from Zustand instead of updating every render frame.
 
 ## Known limitations
 
-- Mobile tactical/gameplay controls are deferred and not optimized in v0.0.6; touch tap-select
+- Mobile tactical/gameplay controls are deferred and not optimized in v0.0.8; touch tap-select
   and two-finger pan/pinch still work but no further mobile polish was done.
 - Pathing uses simple obstacle-aware waypoints rather than a full navmesh, so
   tight village spaces can still produce imperfect routes.
@@ -289,9 +313,9 @@ summary snapshots from Zustand instead of updating every render frame.
   turret behavior; first-person interiors and mouse turret aim remain future
   work.
 - Visuals are still original procedural geometry/materials rather than
-  authored high-poly meshes and texture atlases, so the v0.0.6 reference pass
-  improves composition and art direction without importing or copying
-  commercial-game assets.
+  authored high-poly meshes and texture atlases, so the v0.0.8 combat-feel
+  pass improves projectile readability and vehicle pacing without importing
+  or copying commercial-game assets.
 - Box selection projects unit positions to screen space and ignores models
   partially obscured behind terrain or buildings; very small units at extreme
   zoom-out may need a slightly wider drag.
@@ -305,14 +329,18 @@ summary snapshots from Zustand instead of updating every render frame.
 
 ## Roadmap
 
-- v0.0.7 — full navmesh pathing in the dense town, real animated unit
-  models (legged infantry, recoil on turret), wider building damage
-  states (smoked, on-fire, partial-collapse), additional mission with
-  multi-zone control, mission-select shell.
-- v0.0.8 — second campaign mission, dynamic weather (rain / dust kicked
-  up by vehicles), unit veterancy, saveable settings.
+- v0.0.9 — first slice of the "Desktop HD Polish" plan: improved
+  direct-control feel (smoother acceleration, camera lag, recoil and
+  reload feedback, crosshair/weapon state), visual polish pass on
+  lighting / projectile trails / explosions / smoke / wrecks, and basic
+  layered audio (cannon vs. rifle distinction, impacts, alert stingers).
+- v0.0.10 — tactical layer polish (camera feel, selection confidence,
+  order feedback, minimap usability), mission pacing rework for
+  Operation Crossroads, and pooled transient effects / instanced scenery
+  for stable desktop FPS.
 - v0.1.0 — campaign shell with save progression, persistent unit roster,
-  and a small in-mission tutorial overlay.
+  a small in-mission tutorial overlay, and a second campaign mission with
+  multi-zone control.
 
 ## License
 

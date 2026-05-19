@@ -72,11 +72,14 @@ export const TACTICAL_CAMERA_ROTATE_SPEED = 1.6;
 export const SELECTION_BOX_DRAG_THRESHOLD = 6;
 
 // Direct-control tuning.
-export const DC_FORWARD_ACCEL = 12;
-export const DC_REVERSE_ACCEL = 8;
+export const DC_FORWARD_ACCEL = 14;
+export const DC_REVERSE_ACCEL = 9;
 export const DC_TURN_RATE = 1.5; // radians/sec
-export const DC_MAX_FORWARD_SPEED = 9;
-export const DC_MAX_REVERSE_SPEED = 5;
+// Upper bound on direct-control forward / reverse speed. Per-unit speed stat
+// still wins via Math.min in the engine, so infantry/AT guns stay slow even
+// though tanks now reach their higher template speeds.
+export const DC_MAX_FORWARD_SPEED = 14;
+export const DC_MAX_REVERSE_SPEED = 7;
 
 // Visual / colors used by the renderer.
 export const COLOR = {

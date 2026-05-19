@@ -42,25 +42,31 @@ export function updateCombat(
     const aimError = Math.abs(shortestAngleDelta(aimedAngle, desiredWorldAngle));
 
     if (aimError <= TURRET_AIM_TOLERANCE && state.time - unit.weapon.lastFiredAt >= unit.weapon.reloadSeconds) {
-      const proj = spawnProjectile(unit, aimedAngle, state.time);
-      outProjectiles.push(proj);
+      if (unit.type === 'infantry') {
+        spawnInfantryBurst(unit, aimedAngle, state.time, outProjectiles);
+      } else {
+        outProjectiles.push(spawnProjectile(unit, aimedAngle, state.time));
+      }
       unit.weapon.lastFiredAt = state.time;
-      // Brief muzzle flash effect.
+      // Brief muzzle flash effect (smaller + no smoke for infantry rifles).
       state.effects.push({
         id: `mfx_${unit.id}_${state.time.toFixed(2)}`,
         kind: 'muzzleFlash',
         position: muzzlePosition(unit, aimedAngle),
         spawnedAt: state.time,
-        duration: 0.08,
+        duration: unit.type === 'infantry' ? 0.05 : 0.08,
+        scale: unit.type === 'infantry' ? 0.5 : undefined,
       });
-      state.effects.push({
-        id: `smoke_${unit.id}_${state.time.toFixed(2)}`,
-        kind: 'smoke',
-        position: muzzlePosition(unit, aimedAngle),
-        spawnedAt: state.time,
-        duration: 0.35,
-        scale: 0.45,
-      });
+      if (unit.type !== 'infantry') {
+        state.effects.push({
+          id: `smoke_${unit.id}_${state.time.toFixed(2)}`,
+          kind: 'smoke',
+          position: muzzlePosition(unit, aimedAngle),
+          spawnedAt: state.time,
+          duration: 0.35,
+          scale: 0.45,
+        });
+      }
     }
   }
 }
@@ -79,7 +85,36 @@ function spawnProjectile(unit: Unit, worldAngle: number, time: number): Projecti
     splashRadius: unit.weapon.splashRadius,
     spawnedAt: time,
     lifetime: 4,
+    kind: 'shell',
   });
+}
+
+// Infantry squad volley: emit 3 rifle bullets with slight angular spread so it
+// reads as multiple riflemen, not a single cannon shot. Per-bullet damage is
+// already balanced in the infantry weapon template.
+const INFANTRY_BURST_COUNT = 3;
+const INFANTRY_BURST_SPREAD = 0.05; // radians, ~2.9 degrees off-axis at the edges
+function spawnInfantryBurst(unit: Unit, worldAngle: number, time: number, out: Projectile[]) {
+  const speed = unit.weapon.projectileSpeed;
+  const muzzle = muzzlePosition(unit, worldAngle);
+  for (let i = 0; i < INFANTRY_BURST_COUNT; i++) {
+    const offset = ((i / (INFANTRY_BURST_COUNT - 1)) - 0.5) * 2 * INFANTRY_BURST_SPREAD;
+    const a = worldAngle + offset;
+    const sin = Math.sin(a);
+    const cos = Math.cos(a);
+    out.push(
+      makeProjectile({
+        ownerId: unit.id,
+        faction: unit.faction,
+        position: muzzle,
+        velocity: { x: sin * speed, y: 0, z: cos * speed },
+        damage: unit.weapon.damage,
+        spawnedAt: time,
+        lifetime: 2.2,
+        kind: 'bullet',
+      }),
+    );
+  }
 }
 
 function muzzlePosition(unit: Unit, worldAngle: number) {
