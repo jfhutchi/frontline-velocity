@@ -34,11 +34,14 @@ export const MainMenu: React.FC = () => {
                 'An original spiritual successor to classic desktop tactical / RTS games. ' +
                 'All assets, names, code, and missions in this build are original — no copyrighted ' +
                 'content from any prior commercial title is used. ' +
-                'This build ships the v0.0.8 combat-feel pass: infantry squads now volley short ' +
-                'rifle bursts of small tracer bullets instead of single tank-style shells, and ' +
-                'friendly armor (medium / heavy / light tanks and the recon jeep) moves faster ' +
-                'with a raised direct-control speed cap. Infantry, anti-tank guns, and mortars ' +
-                'keep their original speeds.',
+                'This build adds the v0.8.2 spawn cleanup on top of v0.8.1 polish and ' +
+                'v0.0.8 combat changes. v0.8.2: any enemy authored on top of a building is ' +
+                'now shifted just outside its footprint at mission load, and all buildings ' +
+                'are confirmed destructible. v0.8.1: direct-control jump-in repaints ' +
+                'immediately, house / barn roofs are no longer oversized pyramids, fields ' +
+                'no longer spill onto roads or buildings, and the minimap camera indicator ' +
+                'points where the camera is actually looking. v0.0.8 rifle-burst infantry ' +
+                'and faster friendly armor are still in.',
             );
           }}
         >

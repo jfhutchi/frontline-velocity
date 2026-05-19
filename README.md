@@ -5,11 +5,42 @@ armored platoon trying to capture a defended village crossroads. Issue
 attack-move orders from the tactical command view, then jump into a vehicle and
 fight directly from a third-person combat camera.
 
-**Current version: v0.0.8 — rifle squads & faster armor**
+**Current version: v0.8.2 — enemy spawn cleanup**
+
+## What's new in v0.8.2
+
+- Enemy units no longer authored on top of a building footprint stay
+  there. `createOperationCrossroads` now runs a post-build pass that
+  detects any unit whose spawn falls inside a building's oriented box
+  and shifts it just outside along the shortest axis. The unit's
+  defensive home is moved with it so guard / patrol behavior anchors at
+  the new position. A confirming audit of `kind: 'building'` decorations
+  shows every building in the mission already carries
+  `destructible: true`, so structural damage works uniformly across
+  clusters, bunkers, churches, factories, and barns.
+
+## What's new in v0.8.1
+
+- Direct control no longer opens to a blank canvas. The HUD swap on
+  jump-in resized the canvas box after the engine had already rendered
+  one frame; the engine now schedules a fresh `engine.resize()` over the
+  next couple of frames whenever the camera mode switches, so the world
+  paints immediately instead of waiting for a window resize.
+- House and barn roofs no longer dwarf the walls. The 3-tessellation
+  cylinder prism used for pitched roofs is now vertically squashed so
+  the peak rises ~30–40% of the building footprint above the eaves
+  instead of nearly a full footprint.
+- Field patches stop spilling onto roads and over building footprints.
+  Random field placement now rejects any candidate whose bounding box
+  intersects an existing road or building, with a small margin so eaves
+  still get a green edge.
+- Minimap camera-facing indicator was rotated 90° from the camera's
+  actual view direction at the default tactical angle; it now points the
+  way the camera is looking.
 
 ## What's new in v0.0.8
 
-v0.0.8 is a focused combat-feel pass:
+v0.0.8 was a focused combat-feel pass:
 
 - Infantry no longer fires single tank-style shells. Each squad now volleys a
   short burst of three rifle bullets per fire cycle with a small angular
@@ -304,7 +335,7 @@ summary snapshots from Zustand instead of updating every render frame.
 
 ## Known limitations
 
-- Mobile tactical/gameplay controls are deferred and not optimized in v0.0.8; touch tap-select
+- Mobile tactical/gameplay controls are deferred and not optimized in v0.8.2; touch tap-select
   and two-finger pan/pinch still work but no further mobile polish was done.
 - Pathing uses simple obstacle-aware waypoints rather than a full navmesh, so
   tight village spaces can still produce imperfect routes.
@@ -313,9 +344,9 @@ summary snapshots from Zustand instead of updating every render frame.
   turret behavior; first-person interiors and mouse turret aim remain future
   work.
 - Visuals are still original procedural geometry/materials rather than
-  authored high-poly meshes and texture atlases, so the v0.0.8 combat-feel
-  pass improves projectile readability and vehicle pacing without importing
-  or copying commercial-game assets.
+  authored high-poly meshes and texture atlases, so the v0.8.1 cleanup
+  pass tightens roof proportions, field placement, and minimap orientation
+  without importing or copying commercial-game assets.
 - Box selection projects unit positions to screen space and ignores models
   partially obscured behind terrain or buildings; very small units at extreme
   zoom-out may need a slightly wider drag.

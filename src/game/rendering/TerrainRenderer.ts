@@ -430,9 +430,15 @@ export class TerrainRenderer {
     }
 
     if (style === 'barn') {
-      // Big pitched roof barn.
+      // Pitched-roof barn. The 3-tessellation cylinder is an equilateral
+      // triangular prism, which without correction makes the peak rise nearly
+      // a full footprint above the eaves and visually dwarfs the walls.
+      // Squash the cross-section vertically (`scaling.y`) and tuck the base
+      // back down so it still rests on the wall top.
+      const ROOF_PITCH_Y = 0.48;
+      const span = Math.min(w, depth);
       const roof = MeshBuilder.CreateCylinder(`${d.id}_roof`, {
-        diameter: Math.min(w, depth) * 1.15,
+        diameter: span * 1.15,
         height: w + 0.6,
         tessellation: 3,
       }, this.scene);
@@ -440,7 +446,10 @@ export class TerrainRenderer {
       roof.parent = wall;
       roof.rotation.z = Math.PI / 2;
       roof.rotation.y = Math.PI / 2;
-      roof.position = new Vector3(0, h / 2 + Math.min(w, depth) * 0.32, 0);
+      roof.scaling.y = ROOF_PITCH_Y;
+      // Base of the squashed prism sits on the wall top: offset = r/2 * scaling.y
+      // where r = diameter / 2.
+      roof.position = new Vector3(0, h / 2 + (span * 1.15 * 0.25) * ROOF_PITCH_Y, 0);
       this.shadowCaster(roof);
     } else if (style === 'church') {
       const roof = MeshBuilder.CreateBox(`${d.id}_roof`, { width: w + 0.4, height: 0.4, depth: depth + 0.4 }, this.scene);
@@ -495,8 +504,12 @@ export class TerrainRenderer {
       stack.position = new Vector3(w * 0.28, h / 2 + h * 0.4, depth * 0.18);
       this.shadowCaster(stack);
     } else {
+      // House pitched roof — same equilateral-triangle prism technique as
+      // the barn, just slightly shallower so houses read distinct from barns.
+      const ROOF_PITCH_Y = 0.42;
+      const span = Math.min(w, depth);
       const roof = MeshBuilder.CreateCylinder(`${d.id}_roof`, {
-        diameter: Math.min(w, depth) * 1.12,
+        diameter: span * 1.12,
         height: w + 0.75,
         tessellation: 3,
       }, this.scene);
@@ -504,7 +517,8 @@ export class TerrainRenderer {
       roof.parent = wall;
       roof.rotation.z = Math.PI / 2;
       roof.rotation.y = Math.PI / 2;
-      roof.position = new Vector3(0, h / 2 + Math.min(w, depth) * 0.29, 0);
+      roof.scaling.y = ROOF_PITCH_Y;
+      roof.position = new Vector3(0, h / 2 + (span * 1.12 * 0.25) * ROOF_PITCH_Y, 0);
       this.shadowCaster(roof);
     }
 
